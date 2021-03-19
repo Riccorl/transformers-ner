@@ -1,56 +1,65 @@
-from typing import Any
-
 import pytorch_lightning as pl
 import torch
+import torch.nn.functional as F
+import transformer_embedder as tre
+from torch import nn
 
 
-class BasePLModule(pl.LightningModule):
-
+class NERModule(pl.LightningModule):
     def __init__(self, conf, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.save_hyperparameters(conf)
+        # layers
+        self.language_model = tre.TransformerEmbedder(
+            conf.language_model,
+            subtoken_pooling="mean",
+            output_layer="sum",
+            fine_tune=True,
+        )
+        self.dropout = nn.Dropout(0.1)
+        self.classifier = nn.Linear(self.language_model.hidden_size, 9, bias=False)
+        # metrics
+        self.f1 = pl.metrics.F1(9)
 
-    def forward(self, **kwargs) -> dict:
-        """
-        Method for the forward pass.
-        'training_step', 'validation_step' and 'test_step' should call
-        this method in order to compute the output predictions and the loss.
-
-        Returns:
-            output_dict: forward output containing the predictions (output logits ecc...) and the loss if any.
-
-        """
-        output_dict = {}
-        return output_dict
+    def forward(self, inputs, *args, **kwargs) -> torch.Tensor:
+        x = self.language_model(**inputs).word_embeddings
+        x = self.dropout(x)
+        x = self.classifier(x)
+        return x
 
     def training_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
-        forward_output = self.forward(**batch)
-        self.log('loss', forward_output['loss'])
-        return forward_output['loss']
+        loss, f1_score = self.shared_step(batch)
+        log = {"loss": loss, "f1": f1_score}
+        self.log_dict(log)
+        return loss
 
     def validation_step(self, batch: dict, batch_idx: int) -> None:
-        forward_output = self.forward(**batch)
-        self.log('val_loss', forward_output['loss'])
+        loss, f1_score = self.shared_step(batch)
+        log = {"val_loss": loss, "val_f1": f1_score}
+        self.log_dict(log)
 
-    def test_step(self, batch: dict, batch_idx: int) -> Any:
-        raise NotImplementedError
+    def test_step(self, batch: dict, batch_idx: int) -> None:
+        loss, f1_score = self.shared_step(batch)
+        log = {"test_loss": loss, "test_f1": f1_score}
+        self.log_dict(log)
+
+    def shared_step(self, batch: dict):
+        x, y = batch
+        y_hat = self.forward(x)
+        loss = F.cross_entropy(y_hat.view(-1, 9), y.view(-1))
+        f1_score = self.f1(y_hat.view(-1, 9), y.view(-1))
+        return loss, f1_score
 
     def configure_optimizers(self):
-        """
-        FROM PYTORCH LIGHTNING DOCUMENTATION
-
-        Choose what optimizers and learning-rate schedulers to use in your optimization.
-        Normally you'd need one. But in the case of GANs or similar you might have multiple.
-
-        Return:
-            Any of these 6 options.
-
-            - Single optimizer.
-            - List or Tuple - List of optimizers.
-            - Two lists - The first list has multiple optimizers, the second a list of LR schedulers (or lr_dict).
-            - Dictionary, with an 'optimizer' key, and (optionally) a 'lr_scheduler'
-              key whose value is a single LR scheduler or lr_dict.
-            - Tuple of dictionaries as described, with an optional 'frequency' key.
-            - None - Fit will run without any optimizer.
-        """
-        raise NotImplementedError
+        groups = [
+            {
+                "params": self.classifier.parameters(),
+                "lr": 2e-3,
+            },
+            {
+                "params": self.language_model.parameters(),
+                "lr": 1e-5,
+                "correct_bias": False,
+            },
+        ]
+        return torch.optim.Adam(groups)

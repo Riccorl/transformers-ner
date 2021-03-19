@@ -4,8 +4,8 @@ import hydra
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from src.pl_data_modules import BasePLDataModule
-from src.pl_modules import BasePLModule
+from src.pl_data_modules import NERataModule
+from src.pl_modules import NERModule
 
 
 def train(conf: omegaconf.DictConfig) -> None:
@@ -14,10 +14,10 @@ def train(conf: omegaconf.DictConfig) -> None:
     pl.seed_everything(conf.seed)
 
     # data module declaration
-    pl_data_module = BasePLDataModule(conf)
+    pl_data_module = NERataModule(conf)
 
     # main module declaration
-    pl_module = BasePLModule(conf)
+    pl_module = NERModule(conf)
 
     # callbacks declaration
     callbacks_store = []

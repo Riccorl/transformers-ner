@@ -20,4 +20,4 @@ save_top_k: 5
 
 # core
 gpus: 1
-precision: 16
+precision: 32

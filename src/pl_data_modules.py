@@ -5,35 +5,16 @@ from omegaconf import DictConfig
 import torch
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
+from datasets import load_dataset, load_metric
+import transformer_embedder as tre
 
 
-class BasePLDataModule(pl.LightningDataModule):
+class NERataModule(pl.LightningDataModule):
     """
     FROM LIGHTNING DOCUMENTATION
 
     A DataModule standardizes the training, val, test splits, data preparation and transforms.
     The main advantage is consistent data splits, data preparation and transforms across models.
-
-    Example::
-
-        class MyDataModule(LightningDataModule):
-            def __init__(self):
-                super().__init__()
-            def prepare_data(self):
-                # download, split, etc...
-                # only called on 1 GPU/TPU in distributed
-            def setup(self):
-                # make assignments here (val/train/test split)
-                # called on every process in DDP
-            def train_dataloader(self):
-                train_split = Dataset(...)
-                return DataLoader(train_split)
-            def val_dataloader(self):
-                val_split = Dataset(...)
-                return DataLoader(val_split)
-            def test_dataloader(self):
-                test_split = Dataset(...)
-                return DataLoader(test_split)
 
     A DataModule implements 5 key methods:
 
@@ -52,21 +33,64 @@ class BasePLDataModule(pl.LightningDataModule):
     def __init__(self, conf: DictConfig):
         super().__init__()
         self.conf = conf
+        self.tokenizer = tre.Tokenizer(self.conf.language_model)
+        self.label_dict = None
+        self.train_data = None
+        self.dev_data = None
 
     def prepare_data(self, *args, **kwargs):
-        raise NotImplementedError
+        datasets = load_dataset("conll2003")
+        self.label_dict = {
+            n: i
+            for i, n in enumerate(
+                datasets["train"].features[f"{self.conf.task}_tags"].feature.names
+            )
+        }
+        # train
+        self.train_data = datasets["train"]
+        # dev
+        self.dev_data = datasets["validation"]
 
     def setup(self, stage: Optional[str] = None):
-        raise NotImplementedError
+        pass
 
     def train_dataloader(self, *args, **kwargs) -> DataLoader:
-        raise NotImplementedError
+        return DataLoader(
+            self.train_data,
+            batch_size=self.conf.batch_size,
+            collate_fn=self.collate_fn,
+            num_workers=self.conf.num_workers,
+            shuffle=True,
+        )
 
     def val_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
-        raise NotImplementedError
+        return DataLoader(
+            self.dev_data,
+            batch_size=self.conf.batch_size,
+            collate_fn=self.collate_fn,
+            num_workers=self.conf.num_workers,
+        )
 
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         raise NotImplementedError
 
-    def transfer_batch_to_device(self, batch: Any, device: torch.device) -> Any:
-        raise NotImplementedError
+    def transfer_batch_to_device(
+        self, batch: Any, device: Optional[torch.device] = None
+    ) -> Any:
+        return tuple(b.to(device) for b in batch)
+
+    def collate_fn(self, batch):
+        batch_x = self.conf.tokenizer(
+            [b["tokens"] for b in batch],
+            return_tensors=True,
+            padding=True,
+        )
+        # prepare for possible label
+        batch_out = [batch_x]
+        # if no labels, prediction batch
+        if f"{self.conf.task}_tags" in batch[0].keys():
+            batch_y = [[0] + b[f"{self.conf.task}_tags"] + [0] for b in batch]
+            batch_y = [self.tokenizer.pad_sequence(y, 0, "word") for y in batch_y]
+            batch_y = torch.as_tensor(batch_y)
+            batch_out.append(batch_y)
+        return tuple(batch_out)
