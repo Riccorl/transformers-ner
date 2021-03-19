@@ -33,7 +33,7 @@ class NERataModule(pl.LightningDataModule):
     def __init__(self, conf: DictConfig):
         super().__init__()
         self.conf = conf
-        self.tokenizer = tre.Tokenizer(self.conf.language_model)
+        self.tokenizer = tre.Tokenizer(self.conf.language_model_name)
         self.label_dict = None
         self.train_data = None
         self.dev_data = None

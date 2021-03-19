@@ -11,7 +11,7 @@ class NERModule(pl.LightningModule):
         self.save_hyperparameters(conf)
         # layers
         self.language_model = tre.TransformerEmbedder(
-            conf.language_model,
+            conf.language_model_name,
             subtoken_pooling="mean",
             output_layer="sum",
             fine_tune=True,
