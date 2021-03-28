@@ -1,7 +1,7 @@
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1X6zEbRV0sZzcZCVC3Ir2j3TXEUwC0hL-?usp=sharing)
 [![PyTorch](https://img.shields.io/badge/PyTorch-orange?logo=pytorch)](https://pytorch.org/)
 [![Transformer-Embedder](https://img.shields.io/badge/Transformer%20Embedder-1.7-6670ff)](https://huggingface.co/transformers/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/psf/black)
-[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1X6zEbRV0sZzcZCVC3Ir2j3TXEUwC0hL-?usp=sharing)
 
 # Transformers NER
 
@@ -39,6 +39,25 @@ There are other experiment related parameters in the files in `conf` directory.
 Run the following code to evaluate the model against the test set:
 
 ```bash
-python src/evaluate.py \
-  checkpoint_path="/absolute/path/to/checkpoint"
+python src/evaluate.py checkpoint_path="/absolute/path/to/checkpoint"
+```
+
+## Results
+
+This model trained using `bert-base-cased` as language model achieves this scores against the CoNLL-2003 test set
+
+```text
+overall_precision: 0.8953856991898556
+overall_recall: 0.9162011173184358
+overall_f1: 0.9056738220361628
+overall_accuracy: 0.9813177609231771
+```
+
+and the following scores on the dev set:
+
+```text
+overall_precision: 0.9419875567513032
+overall_recall: 0.9530452534875808
+overall_f1: 0.9474841437632135 
+overall_accuracy: 0.9907299634186897
 ```
