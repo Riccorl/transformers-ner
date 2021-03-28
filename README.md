@@ -1,12 +1,18 @@
+[![PyTorch](https://img.shields.io/badge/PyTorch-orange?logo=pytorch)](https://pytorch.org/)
+[![Transformer-Embedder](https://img.shields.io/badge/Transformer%20Embedder-1.7-6670ff)](https://huggingface.co/transformers/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/psf/black)
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1X6zEbRV0sZzcZCVC3Ir2j3TXEUwC0hL-?usp=sharing)
+
 # Transformers NER
 
-This is an example project for [TransformerEmbedder](https://github.com/Riccorl/transformer-embedder) library.
+This is an example project for [Transformer Embedder](https://github.com/Riccorl/transformer-embedder) library.
 
 First thing first:
 
 ```bash
 pip install -r requirements.txt
 ```
+
 ## Train
 
 To train a model use:
@@ -30,7 +36,9 @@ There are other experiment related parameters in the files in `conf` directory.
 
 ## Evaluation
 
+Run the following code to evaluate the model against the test set:
 
-
-## Using the repository
-To use this repository as a starting template for you projects, you can just click the green button "Use this template" at the top of this page. More on using GitHub repositories on the following [link](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template#creating-a-repository-from-a-template).
+```bash
+python src/evaluate.py \
+  checkpoint_path="/absolute/path/to/checkpoint"
+```

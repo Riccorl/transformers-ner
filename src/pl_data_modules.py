@@ -40,7 +40,7 @@ class NERDataModule(pl.LightningDataModule):
         self.test_data = None
 
     def prepare_data(self, *args, **kwargs):
-        datasets = load_dataset("conll2003")
+        datasets = load_dataset(self.conf.dataset)
         self.label_dict = {
             n: i
             for i, n in enumerate(

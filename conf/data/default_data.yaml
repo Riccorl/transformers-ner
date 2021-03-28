@@ -2,3 +2,4 @@
 
 num_workers: 4
 task: "ner"
+dataset: "conll2003"
