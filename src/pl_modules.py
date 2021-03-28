@@ -13,9 +13,9 @@ class NERModule(pl.LightningModule):
         # layers
         self.language_model = tre.TransformerEmbedder(
             conf.language_model_name,
-            subtoken_pooling="mean",
-            output_layer="sum",
-            fine_tune=True,
+            subtoken_pooling=conf.subtoken_pooling,
+            output_layer=conf.output_layer,
+            fine_tune=conf.lm_fine_tune,
         )
         self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(
