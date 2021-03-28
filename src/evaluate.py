@@ -13,9 +13,9 @@ log = logging.getLogger(__name__)
 
 
 def compute_metrics(predictions, labels, sentence_length, label_list, metric):
-    predictions = torch.argmax(predictions, dim=-1)
-    predictions = predictions.tolist()
-    labels = labels.tolist()
+    # predictions = torch.argmax(predictions, dim=-1)
+    # predictions = predictions.tolist()
+    # labels = labels.tolist()
 
     true_predictions = []
     true_labels = []
@@ -43,24 +43,26 @@ def predict(conf: omegaconf.DictConfig):
     data_module.prepare_data()
     # score data structure
     overall_scores = {
-        "precision": [],
-        "recall": [],
-        "f1": [],
-        "accuracy": [],
+        "overall_precision": [],
+        "overall_recall": [],
+        "overall_f1": [],
+        "overall_accuracy": [],
     }
     # predict
+    predictions, labels, sentence_length = [], [], []
     for batch in tqdm(data_module.test_dataloader(), desc="Predictions"):
         x, y = model.transfer_batch_to_device(batch, device)
         y_hat = model(x)
-        scores = compute_metrics(
-            y_hat, y, x["sentence_length"], data_module.label_dict_inverted, metric
-        )
-        for k, v in scores.items():
-            if k in overall_scores.keys():
-                overall_scores[k] += v
+        predictions += torch.argmax(y_hat, dim=-1).tolist()
+        labels += y.tolist()
+        sentence_length += x["sentence_length"]
+
     # overall score print
     log.info("Overal scores")
-    for k, v in overall_scores.items():
+    scores = compute_metrics(
+        predictions, labels, sentence_length, data_module.label_dict_inverted, metric
+    )
+    for k, v in scores.items():
         log.info(f"{k}: {v}")
 
 

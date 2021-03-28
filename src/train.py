@@ -4,8 +4,8 @@ import hydra
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from src.pl_data_modules import NERDataModule
-from src.pl_modules import NERModule
+from pl_data_modules import NERDataModule
+from pl_modules import NERModule
 
 
 def train(conf: omegaconf.DictConfig) -> None:
@@ -38,7 +38,7 @@ def train(conf: omegaconf.DictConfig) -> None:
             save_top_k=conf.save_top_k,
             verbose=True,
             mode=conf.monitor_var_mode,
-            filename="{epoch}.{val_loss:.2f}",
+            filename="{epoch}.{val_f1:.2f}",
         )
     )
 
