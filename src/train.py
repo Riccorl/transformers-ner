@@ -49,7 +49,7 @@ def train(conf: omegaconf.DictConfig) -> None:
         gradient_clip_val=conf.gradient_clip_value,
         val_check_interval=conf.val_check_interval,
         callbacks=callbacks_store,
-        max_steps=conf.max_steps,
+        max_epochs=conf.max_epochs,
         precision=conf.precision,
     )
 

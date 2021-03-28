@@ -1,12 +1,11 @@
 from typing import Any, Union, List, Optional
 
-from omegaconf import DictConfig
-
-import torch
-from torch.utils.data import DataLoader
 import pytorch_lightning as pl
-from datasets import load_dataset, load_metric
+import torch
 import transformer_embedder as tre
+from datasets import load_dataset, load_metric
+from omegaconf import DictConfig
+from torch.utils.data import DataLoader
 
 
 class NERataModule(pl.LightningDataModule):
@@ -41,7 +40,7 @@ class NERataModule(pl.LightningDataModule):
     def prepare_data(self, *args, **kwargs):
         datasets = load_dataset("conll2003")
         self.label_dict = {
-            n: i
+            n: i + 1
             for i, n in enumerate(
                 datasets["train"].features[f"{self.conf.task}_tags"].feature.names
             )
@@ -80,7 +79,7 @@ class NERataModule(pl.LightningDataModule):
         return tuple(b.to(device) for b in batch)
 
     def collate_fn(self, batch):
-        batch_x = self.conf.tokenizer(
+        batch_x = self.tokenizer(
             [b["tokens"] for b in batch],
             return_tensors=True,
             padding=True,

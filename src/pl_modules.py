@@ -46,8 +46,11 @@ class NERModule(pl.LightningModule):
     def shared_step(self, batch: dict):
         x, y = batch
         y_hat = self.forward(x)
-        loss = F.cross_entropy(y_hat.view(-1, 9), y.view(-1))
-        f1_score = self.f1(y_hat.view(-1, 9), y.view(-1))
+        loss = F.cross_entropy(y_hat.view(-1, 9), y.view(-1), ignore_index=0)
+        f1_score = []
+        for i, sequence_length in enumerate(x["sequence_length"]):
+            f1_score.append(self.f1(y_hat[i, :sequence_length, :].view(-1, 9), y[i, :sequence_length].view(-1)))
+        f1_score = sum(f1_score) / len(f1_score)
         return loss, f1_score
 
     def configure_optimizers(self):
