@@ -7,7 +7,7 @@ seed: 42
 batch_size: 32
 gradient_acc_steps: 1
 gradient_clip_value: 1.0
-epochs: 10
+max_epochs: 10
 
 # evaluation and persistence
 apply_early_stopping: True

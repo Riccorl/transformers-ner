@@ -3,12 +3,12 @@ from typing import Any, Union, List, Optional
 import pytorch_lightning as pl
 import torch
 import transformer_embedder as tre
-from datasets import load_dataset, load_metric
+from datasets import load_dataset
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 
 
-class NERataModule(pl.LightningDataModule):
+class NERDataModule(pl.LightningDataModule):
     """
     FROM LIGHTNING DOCUMENTATION
 
@@ -34,13 +34,21 @@ class NERataModule(pl.LightningDataModule):
         self.conf = conf
         self.tokenizer = tre.Tokenizer(self.conf.language_model_name)
         self.label_dict = None
+        self.label_dict_inverted = None
         self.train_data = None
         self.dev_data = None
+        self.test_data = None
 
     def prepare_data(self, *args, **kwargs):
         datasets = load_dataset("conll2003")
         self.label_dict = {
-            n: i + 1
+            n: i
+            for i, n in enumerate(
+                datasets["train"].features[f"{self.conf.task}_tags"].feature.names
+            )
+        }
+        self.label_dict_inverted = {
+            i: n
             for i, n in enumerate(
                 datasets["train"].features[f"{self.conf.task}_tags"].feature.names
             )
@@ -49,6 +57,8 @@ class NERataModule(pl.LightningDataModule):
         self.train_data = datasets["train"]
         # dev
         self.dev_data = datasets["validation"]
+        # test
+        self.test_data = datasets["test"]
 
     def setup(self, stage: Optional[str] = None):
         pass
@@ -71,7 +81,12 @@ class NERataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
-        raise NotImplementedError
+        return DataLoader(
+            self.test_data,
+            batch_size=self.conf.batch_size,
+            collate_fn=self.collate_fn,
+            num_workers=self.conf.num_workers,
+        )
 
     def transfer_batch_to_device(
         self, batch: Any, device: Optional[torch.device] = None
@@ -89,7 +104,7 @@ class NERataModule(pl.LightningDataModule):
         # if no labels, prediction batch
         if f"{self.conf.task}_tags" in batch[0].keys():
             batch_y = [[0] + b[f"{self.conf.task}_tags"] + [0] for b in batch]
-            batch_y = [self.tokenizer.pad_sequence(y, 0, "word") for y in batch_y]
+            batch_y = [self.tokenizer.pad_sequence(y, -100, "word") for y in batch_y]
             batch_y = torch.as_tensor(batch_y)
             batch_out.append(batch_y)
         return tuple(batch_out)

@@ -9,6 +9,7 @@ class NERModule(pl.LightningModule):
     def __init__(self, conf, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.save_hyperparameters(conf)
+        self.num_classes = 9
         # layers
         self.language_model = tre.TransformerEmbedder(
             conf.language_model_name,
@@ -17,9 +18,11 @@ class NERModule(pl.LightningModule):
             fine_tune=True,
         )
         self.dropout = nn.Dropout(0.1)
-        self.classifier = nn.Linear(self.language_model.hidden_size, 9, bias=False)
+        self.classifier = nn.Linear(
+            self.language_model.hidden_size, self.num_classes, bias=False
+        )
         # metrics
-        self.f1 = pl.metrics.F1(9)
+        self.f1 = pl.metrics.F1(self.num_classes)
 
     def forward(self, inputs, *args, **kwargs) -> torch.Tensor:
         x = self.language_model(**inputs).word_embeddings
@@ -46,10 +49,15 @@ class NERModule(pl.LightningModule):
     def shared_step(self, batch: dict):
         x, y = batch
         y_hat = self.forward(x)
-        loss = F.cross_entropy(y_hat.view(-1, 9), y.view(-1), ignore_index=0)
+        loss = F.cross_entropy(y_hat.view(-1, self.num_classes), y.view(-1))
         f1_score = []
-        for i, sequence_length in enumerate(x["sequence_length"]):
-            f1_score.append(self.f1(y_hat[i, :sequence_length, :].view(-1, 9), y[i, :sequence_length].view(-1)))
+        for i, sentence_length in enumerate(x["sentence_length"]):
+            f1_score.append(
+                self.f1(
+                    y_hat[i, :sentence_length, :].view(-1, self.num_classes),
+                    y[i, :sentence_length].view(-1),
+                )
+            )
         f1_score = sum(f1_score) / len(f1_score)
         return loss, f1_score
 

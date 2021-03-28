@@ -4,17 +4,17 @@ import hydra
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from src.pl_data_modules import NERataModule
+from src.pl_data_modules import NERDataModule
 from src.pl_modules import NERModule
 
 
 def train(conf: omegaconf.DictConfig) -> None:
-    
+
     # reproducibility
     pl.seed_everything(conf.seed)
 
     # data module declaration
-    pl_data_module = NERataModule(conf)
+    pl_data_module = NERDataModule(conf)
 
     # main module declaration
     pl_module = NERModule(conf)
@@ -27,7 +27,7 @@ def train(conf: omegaconf.DictConfig) -> None:
             EarlyStopping(
                 monitor=conf.monitor_var,
                 mode=conf.monitor_var_mode,
-                patience=conf.patience
+                patience=conf.patience,
             )
         )
 
@@ -56,14 +56,11 @@ def train(conf: omegaconf.DictConfig) -> None:
     # module fit
     trainer.fit(pl_module, datamodule=pl_data_module)
 
-    # module test
-    trainer.test(pl_module, datamodule=pl_data_module)
 
-
-@hydra.main(config_path='../conf', config_name='root')
+@hydra.main(config_path="../conf", config_name="root")
 def main(conf: omegaconf.DictConfig):
     train(conf)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

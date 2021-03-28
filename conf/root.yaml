@@ -6,5 +6,6 @@ defaults:
   - train: default_train
   - model: default_model
   - data: default_data
+  - predict: default_predict
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog
