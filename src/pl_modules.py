@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 import transformer_embedder as tre
 from torch import nn
+from torchmetrics.classification import F1
 
 
 class NERModule(pl.LightningModule):
@@ -18,11 +19,9 @@ class NERModule(pl.LightningModule):
             fine_tune=conf.lm_fine_tune,
         )
         self.dropout = nn.Dropout(0.1)
-        self.classifier = nn.Linear(
-            self.language_model.hidden_size, self.num_classes, bias=False
-        )
+        self.classifier = nn.Linear(self.language_model.hidden_size, self.num_classes, bias=False)
         # metrics
-        self.f1 = pl.metrics.F1(self.num_classes)
+        self.f1 = F1(self.num_classes)
 
     def forward(self, inputs, *args, **kwargs) -> torch.Tensor:
         x = self.language_model(**inputs).word_embeddings
@@ -51,13 +50,9 @@ class NERModule(pl.LightningModule):
         y_hat = self.forward(x)
         loss = F.cross_entropy(y_hat.view(-1, self.num_classes), y.view(-1))
         f1_score = []
+        y_hat = torch.argmax(y_hat, dim=-1)
         for i, sentence_length in enumerate(x["sentence_length"]):
-            f1_score.append(
-                self.f1(
-                    y_hat[i, :sentence_length, :].view(-1, self.num_classes),
-                    y[i, :sentence_length].view(-1),
-                )
-            )
+            f1_score.append(self.f1(y_hat[i, :sentence_length], y[i, :sentence_length]))
         f1_score = sum(f1_score) / len(f1_score)
         return loss, f1_score
 
