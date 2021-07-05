@@ -3,4 +3,4 @@ hydra-core==1.0.6
 hydra_colorlog
 datasets
 seqeval
-transformer-embedder==1.7.6
+transformer-embedder~=1.7.7
