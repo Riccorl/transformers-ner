@@ -5,6 +5,8 @@ import transformer_embedder as tre
 from torch import nn
 from torchmetrics.classification import F1
 
+from optimizers import RAdam
+
 
 class NERModule(pl.LightningModule):
     def __init__(self, labels, *args, **kwargs) -> None:
@@ -67,4 +69,4 @@ class NERModule(pl.LightningModule):
                 "correct_bias": False,
             },
         ]
-        return torch.optim.Adam(groups)
+        return RAdam(groups)

@@ -32,7 +32,7 @@ def train(conf: omegaconf.DictConfig) -> None:
     # main module declaration
     hydra.utils.log.info(f"Instantiating the Model")
     pl_module: pl.LightningModule = hydra.utils.instantiate(
-        conf.model, labels=pl_data_module.labels
+        conf.model, labels=pl_data_module.label_dict
     )
 
     # callbacks declaration
