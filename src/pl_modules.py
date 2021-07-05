@@ -7,21 +7,20 @@ from torchmetrics.classification import F1
 
 
 class NERModule(pl.LightningModule):
-    def __init__(self, conf, *args, **kwargs) -> None:
+    def __init__(self, labels, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.save_hyperparameters(conf)
-        self.num_classes = 9
+        self.save_hyperparameters()
         # layers
         self.language_model = tre.TransformerEmbedder(
-            conf.language_model_name,
-            subtoken_pooling=conf.subtoken_pooling,
-            output_layer=conf.output_layer,
-            fine_tune=conf.lm_fine_tune,
+            self.hparams.language_model_name,
+            subtoken_pooling=self.hparams.subtoken_pooling,
+            output_layer=self.hparams.output_layer,
+            fine_tune=self.hparams.lm_fine_tune,
         )
         self.dropout = nn.Dropout(0.1)
-        self.classifier = nn.Linear(self.language_model.hidden_size, self.num_classes, bias=False)
+        self.classifier = nn.Linear(self.language_model.hidden_size, len(labels), bias=False)
         # metrics
-        self.f1 = F1(self.num_classes)
+        self.f1 = F1(len(labels))
 
     def forward(self, inputs, *args, **kwargs) -> torch.Tensor:
         x = self.language_model(**inputs).word_embeddings

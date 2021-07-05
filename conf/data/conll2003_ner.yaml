@@ -2,6 +2,7 @@
 
 datamodule:
   _target_: pl_data_modules.NERDataModule
+  language_model_name: ${model.language_model_name}
   task: "ner"
   dataset: "conll2003"
   batch_size: 16
