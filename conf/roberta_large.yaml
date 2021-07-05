@@ -6,7 +6,7 @@ hydra:
 
 defaults:
   - train: default
-  - model: bert_base
+  - model: roberta_large
   - data: conll2003_ner
   - predict: default_predict
   - logging: wandb_logging

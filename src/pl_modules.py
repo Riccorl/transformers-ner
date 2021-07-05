@@ -10,8 +10,9 @@ from optimizers import RAdam
 
 class NERModule(pl.LightningModule):
     def __init__(self, labels, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.save_hyperparameters()
+        self.labels = labels
         # layers
         self.language_model = tre.TransformerEmbedder(
             self.hparams.language_model_name,
@@ -20,9 +21,9 @@ class NERModule(pl.LightningModule):
             fine_tune=self.hparams.lm_fine_tune,
         )
         self.dropout = nn.Dropout(0.1)
-        self.classifier = nn.Linear(self.language_model.hidden_size, len(labels), bias=False)
+        self.classifier = nn.Linear(self.language_model.hidden_size, len(self.labels), bias=False)
         # metrics
-        self.f1 = F1(len(labels))
+        self.f1 = F1(len(self.labels))
 
     def forward(self, inputs, *args, **kwargs) -> torch.Tensor:
         x = self.language_model(**inputs).word_embeddings
@@ -49,7 +50,7 @@ class NERModule(pl.LightningModule):
     def shared_step(self, batch: dict):
         x, y = batch
         y_hat = self.forward(x)
-        loss = F.cross_entropy(y_hat.view(-1, self.num_classes), y.view(-1))
+        loss = F.cross_entropy(y_hat.view(-1, len(self.labels)), y.view(-1))
         f1_score = []
         y_hat = torch.argmax(y_hat, dim=-1)
         for i, sentence_length in enumerate(x["sentence_length"]):
