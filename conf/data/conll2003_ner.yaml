@@ -1,0 +1,8 @@
+# @package _global_
+
+datamodule:
+  _target_: pl_data_modules.NERDataModule
+  task: "ner"
+  dataset: "conll2003"
+  batch_size: 16
+  num_workers: 4

@@ -1,0 +1,12 @@
+# @package _global_
+
+_target_: pl_modules.NERModule
+
+params:
+  # my typical model feature
+  language_model_name: 'bert-base-cased'
+  lr: 1e-5
+  weight_decay: 0
+  lm_fine_tune: True
+  subtoken_pooling: 'mean'
+  output_layer: 'sum'
