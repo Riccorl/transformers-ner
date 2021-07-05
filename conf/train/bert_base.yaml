@@ -15,9 +15,9 @@ pl_trainer:
   val_check_interval: 1.0  # you can specify an int "n" here => validation every "n" steps
   max_epochs: 10
   deterministic: True
+  fast_dev_run: False
   # uncomment the lines below for training with mixed precision
-#  precision: 16
-#  fast_dev_run: False
+  # precision: 16
 
 # early stopping callback
 # "early_stopping_callback: null" will disable early stopping

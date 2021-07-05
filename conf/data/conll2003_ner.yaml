@@ -1,4 +1,4 @@
-# @package _global_
+# @package _group_
 
 datamodule:
   _target_: pl_data_modules.NERDataModule

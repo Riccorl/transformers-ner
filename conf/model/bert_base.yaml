@@ -1,4 +1,4 @@
-# @package _global_
+# @package _group_
 
 _target_: pl_modules.NERModule
 
