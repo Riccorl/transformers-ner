@@ -57,7 +57,6 @@ class NERDataModule(pl.LightningDataModule):
         self.label_dict = {
             n: i for i, n in enumerate(datasets["train"].features["ner_tags"].feature.names)
         }
-        self.label_dict["<PAD>"] = 9
         self.label_dict_inverted = {
             i: n for i, n in enumerate(datasets["train"].features["ner_tags"].feature.names)
         }
@@ -107,9 +106,7 @@ class NERDataModule(pl.LightningDataModule):
         # if no labels, prediction batch
         if "ner_tags" in batch[0].keys():
             batch_y = [[0] + b["ner_tags"] + [0] for b in batch]
-            batch_y = [
-                self.tokenizer.pad_sequence(y, self.label_dict["<PAD>"], "word") for y in batch_y
-            ]
+            batch_y = [self.tokenizer.pad_sequence(y, -100, "word") for y in batch_y]
             batch_y = torch.as_tensor(batch_y)
             batch_out.append(batch_y)
         return tuple(batch_out)
