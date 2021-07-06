@@ -8,7 +8,7 @@ defaults:
   - train: default
   - model: distilbert
   - data: conll2003_ner
-  - predict: default_predict
+  - evaluate: default
   - logging: wandb_logging
   - hydra/job_logging: colorlog
   - hydra/hydra_logging: colorlog

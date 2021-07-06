@@ -25,13 +25,12 @@ def predict(conf: omegaconf.DictConfig):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     log.info("Using {} as device".format(device))
     log.info("Loading model")
-    model = NERModule.load_from_checkpoint(checkpoint_path=conf.checkpoint_path)
+    model = NERModule.load_from_checkpoint(checkpoint_path=conf.evaluate.checkpoint_path)
     model.to(device)
     model.eval()
     # metric
     metric = load_metric("seqeval")
     # data module
-    conf.language_model_name = model.hparams.language_model_name
     data_module = hydra.utils.instantiate(conf.data.datamodule)
     data_module.prepare_data()
     # predict

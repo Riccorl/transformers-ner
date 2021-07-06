@@ -37,25 +37,18 @@ There are other experiment related parameters in the files in `conf` directory.
 Run the following code to evaluate the model against the test set:
 
 ```bash
-python src/evaluate.py checkpoint_path="/absolute/path/to/checkpoint"
+python src/evaluate.py \
+  --config-name="${CONFIG_NAME}" \
+  evaluate.checkpoint_path="/absolute/path/to/checkpoint"
 ```
 
 ## Results
 
-This model trained using `bert-base-cased` as language model achieves this scores against the CoNLL-2003 test set
+These models are trained for 10 epochs, using RAdam with a learning rate of `1e-5`.
 
-```text
-overall_precision: 0.8953856991898556
-overall_recall: 0.9162011173184358
-overall_f1: 0.9056738220361628
-overall_accuracy: 0.9813177609231771
-```
-
-and the following scores on the dev set:
-
-```text
-overall_precision: 0.9419875567513032
-overall_recall: 0.9530452534875808
-overall_f1: 0.9474841437632135 
-overall_accuracy: 0.9907299634186897
-```
+| Language Model 	| F1   	| Inference Time (GPU) 	|
+|----------------	|------	|----------------------	|
+| MiniLM         	| 90.0 	|          6s          	|
+| DistilBERT     	| 88.9  |          6s          	|
+| BERT-base      	|      	|                      	|
+| RoBERTa-large   	| 91.4 	|          24s         	|
