@@ -42,8 +42,19 @@ class NERDataModule(pl.LightningDataModule):
         self.train_data = None
         self.dev_data = None
         self.test_data = None
-        self.label_dict = None
-        self.label_dict_inverted = None
+        self.label_dict = {
+            "PAD": 0,
+            "O": 1,
+            "B-PER": 2,
+            "I-PER": 3,
+            "B-ORG": 4,
+            "I-ORG": 5,
+            "B-LOC": 6,
+            "I-LOC": 7,
+            "B-MISC": 8,
+            "I-MISC": 9,
+        }
+        self.label_dict_inverted = {i: n for n, i in self.label_dict.items()}
         # params
         self.dataset = dataset
         self.language_model_name = language_model_name
@@ -54,17 +65,8 @@ class NERDataModule(pl.LightningDataModule):
 
     def prepare_data(self, *args, **kwargs):
         datasets = load_dataset(self.dataset)
-        self.label_dict = {
-            n: i for i, n in enumerate(datasets["train"].features["ner_tags"].feature.names)
-        }
-        self.label_dict_inverted = {
-            i: n for i, n in enumerate(datasets["train"].features["ner_tags"].feature.names)
-        }
-        # train
         self.train_data = datasets["train"]
-        # dev
         self.dev_data = datasets["validation"]
-        # test
         self.test_data = datasets["test"]
 
     def setup(self, stage: Optional[str] = None):
@@ -109,7 +111,7 @@ class NERDataModule(pl.LightningDataModule):
         # if no labels, prediction batch
         if "ner_tags" in batch[0].keys():
             batch_y = [[0] + b["ner_tags"] + [0] for b in batch]
-            batch_y = [self.tokenizer.pad_sequence(y, -100, "word") for y in batch_y]
+            batch_y = [self.tokenizer.pad_sequence(y, 0, "word") for y in batch_y]
             batch_y = torch.as_tensor(batch_y)
             batch_out.append(batch_y)
         return tuple(batch_out)

@@ -23,7 +23,7 @@ class NERModule(pl.LightningModule):
         self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(self.language_model.hidden_size, len(self.labels), bias=False)
         # metrics
-        self.f1 = F1(len(self.labels))
+        self.f1 = F1(len(self.labels), ignore_index=0)
 
     def forward(self, inputs, *args, **kwargs) -> torch.Tensor:
         x = self.language_model(**inputs).word_embeddings
@@ -51,11 +51,12 @@ class NERModule(pl.LightningModule):
         x, y = batch
         y_hat = self.forward(x)
         loss = F.cross_entropy(y_hat.view(-1, len(self.labels)), y.view(-1))
-        f1_score = []
+        # f1_score = []
         y_hat = torch.argmax(y_hat, dim=-1)
-        for i, sentence_length in enumerate(x["sentence_length"]):
-            f1_score.append(self.f1(y_hat[i, :sentence_length], y[i, :sentence_length]))
-        f1_score = sum(f1_score) / len(f1_score)
+        # for i, sentence_length in enumerate(x["sentence_length"]):
+        #     f1_score.append(self.f1(y_hat[i, :sentence_length], y[i, :sentence_length]))
+        # f1_score = sum(f1_score) / len(f1_score)
+        f1_score = self.f1(y_hat, y)
         return loss, f1_score
 
     def configure_optimizers(self):

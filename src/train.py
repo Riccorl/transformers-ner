@@ -28,7 +28,6 @@ def train(conf: omegaconf.DictConfig) -> None:
     # data module declaration
     hydra.utils.log.info(f"Instantiating the Data Module")
     pl_data_module = hydra.utils.instantiate(conf.data.datamodule)
-    pl_data_module.prepare_data()
 
     # main module declaration
     hydra.utils.log.info(f"Instantiating the Model")
