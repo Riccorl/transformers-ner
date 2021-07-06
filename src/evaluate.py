@@ -2,27 +2,21 @@ import logging
 
 import hydra
 import torch
-from omegaconf import omegaconf
 from datasets import load_metric
+from omegaconf import omegaconf
 from tqdm import tqdm
 
-from pl_data_modules import NERDataModule
 from pl_modules import NERModule
 
 log = logging.getLogger(__name__)
 
 
 def compute_metrics(predictions, labels, sentence_length, label_list, metric):
-    # predictions = torch.argmax(predictions, dim=-1)
-    # predictions = predictions.tolist()
-    # labels = labels.tolist()
-
     true_predictions = []
     true_labels = []
     for prediction, label, s in zip(predictions, labels, sentence_length):
         true_predictions.append([label_list[p] for p in prediction[1 : s - 2]])
         true_labels.append([label_list[l] for l in label[1 : s - 2]])
-
     return metric.compute(predictions=true_predictions, references=true_labels)
 
 
@@ -31,7 +25,6 @@ def predict(conf: omegaconf.DictConfig):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     log.info("Using {} as device".format(device))
     log.info("Loading model")
-    conf.lm_fine_tune = False
     model = NERModule.load_from_checkpoint(checkpoint_path=conf.checkpoint_path)
     model.to(device)
     model.eval()
@@ -39,15 +32,8 @@ def predict(conf: omegaconf.DictConfig):
     metric = load_metric("seqeval")
     # data module
     conf.language_model_name = model.hparams.language_model_name
-    data_module = NERDataModule(conf)
+    data_module = hydra.utils.instantiate(conf.data.datamodule)
     data_module.prepare_data()
-    # score data structure
-    overall_scores = {
-        "overall_precision": [],
-        "overall_recall": [],
-        "overall_f1": [],
-        "overall_accuracy": [],
-    }
     # predict
     predictions, labels, sentence_length = [], [], []
     for batch in tqdm(data_module.test_dataloader(), desc="Predictions"):

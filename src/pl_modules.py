@@ -23,7 +23,7 @@ class NERModule(pl.LightningModule):
         self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(self.language_model.hidden_size, len(self.labels), bias=False)
         # metrics
-        self.f1 = F1(len(self.labels), ignore_index=0)
+        self.f1 = F1(len(self.labels), ignore_index=10)
 
     def forward(self, inputs, *args, **kwargs) -> torch.Tensor:
         x = self.language_model(**inputs).word_embeddings
