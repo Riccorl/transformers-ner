@@ -23,7 +23,7 @@ class NERModule(pl.LightningModule):
         self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(self.language_model.hidden_size, len(self.labels), bias=False)
         # metrics
-        self.f1 = F1(len(self.labels), ignore_index=10)
+        self.f1 = F1(len(self.labels), ignore_index=self.labels["<PAD>"])
 
     def forward(self, inputs, *args, **kwargs) -> torch.Tensor:
         x = self.language_model(**inputs).word_embeddings
@@ -50,7 +50,7 @@ class NERModule(pl.LightningModule):
     def shared_step(self, batch: dict):
         x, y = batch
         y_hat = self.forward(x)
-        loss = F.cross_entropy(y_hat.view(-1, len(self.labels)), y.view(-1))
+        loss = F.cross_entropy(y_hat.view(-1, len(self.labels)), y.view(-1), ignore_index=9)
         # f1_score = []
         y_hat = torch.argmax(y_hat, dim=-1)
         # for i, sentence_length in enumerate(x["sentence_length"]):
@@ -63,11 +63,11 @@ class NERModule(pl.LightningModule):
         groups = [
             {
                 "params": self.classifier.parameters(),
-                "lr": self.hparams.model.lr,
+                "lr": self.hparams.lr,
             },
             {
                 "params": self.language_model.parameters(),
-                "lr": self.hparams.model.lm_lr,
+                "lr": self.hparams.lm_lr,
                 "correct_bias": False,
             },
         ]

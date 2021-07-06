@@ -1,6 +1,6 @@
 [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1X6zEbRV0sZzcZCVC3Ir2j3TXEUwC0hL-?usp=sharing)
 [![PyTorch](https://img.shields.io/badge/PyTorch-orange?logo=pytorch)](https://pytorch.org/)
-[![Transformer-Embedder](https://img.shields.io/badge/Transformer%20Embedder-1.7-6670ff)](https://github.com/Riccorl/transformer-embedder)
+[![Transformer-Embedder](https://img.shields.io/badge/Transformer%20Embedder-1.7.10-6670ff)](https://github.com/Riccorl/transformer-embedder)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/psf/black)
 
 # Transformers NER

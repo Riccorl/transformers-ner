@@ -16,8 +16,7 @@ pl_trainer:
   max_epochs: 10
   deterministic: True
   fast_dev_run: False
-  # uncomment the lines below for training with mixed precision
-  # precision: 16
+  precision: 32
 
 # early stopping callback
 # "early_stopping_callback: null" will disable early stopping
