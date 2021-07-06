@@ -63,10 +63,8 @@ def train(conf: omegaconf.DictConfig) -> None:
     trainer: Trainer = hydra.utils.instantiate(
         conf.train.pl_trainer, callbacks=callbacks_store, logger=logger
     )
-
     # module fit
     trainer.fit(pl_module, datamodule=pl_data_module)
-
     # module test
     trainer.test(pl_module, datamodule=pl_data_module)
 
