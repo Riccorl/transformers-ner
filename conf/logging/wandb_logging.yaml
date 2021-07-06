@@ -8,7 +8,6 @@ wandb_arg:
   _target_: pytorch_lightning.loggers.WandbLogger
   name: ${train.model_name}
   project: 'ner'
-  save_dir: ./
   log_model: True
   mode: 'online'
 

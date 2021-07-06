@@ -62,11 +62,11 @@ class NERModule(pl.LightningModule):
         groups = [
             {
                 "params": self.classifier.parameters(),
-                "lr": 2e-3,
+                "lr": self.hparams.model.lr,
             },
             {
                 "params": self.language_model.parameters(),
-                "lr": 1e-5,
+                "lr": self.hparams.model.lm_lr,
                 "correct_bias": False,
             },
         ]
