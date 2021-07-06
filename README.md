@@ -18,19 +18,17 @@ pip install -r requirements.txt
 To train a model use:
 
 ```bash
-python src/train.py \
-  language_model_name="distilbert-base-cased" \
-  model_name="distilbert-base-ner" \
-  output_layer="sum" \
-  subtoken_pooling="mean"
+!python src/train.py --config-name="${CONFIG_NAME}"
 ```
 
-The parameters available are
+where `${CONFIG_NAME}` is the name of one of the `yaml` file in `conf` folder, e.g. `bert_base`.
+
+The main parameters available are
 
 - `language_model_name`: a language model name/path from HuggingFace transformers library
 - `model_name`: the name of the experiment
 - `output_layer`: from `transformer-embedder`, what kind of output the transformers should give
-- `subtoken_pooling`: from `transformer-embedder`, what kind of poolinf to perform to get back words from sub-tokens
+- `subtoken_pooling`: from `transformer-embedder`, what kind of pooling to perform to get back words from sub-tokens
 
 There are other experiment related parameters in the files in `conf` directory.
 
