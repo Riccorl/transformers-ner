@@ -5,6 +5,7 @@ seed: 42
 
 # model name
 model_name: ${name}  # used to name the directory in which model's checkpoints will be stored (experiments/model_name/...)
+export: True
 
 # pl_trainer
 pl_trainer:
