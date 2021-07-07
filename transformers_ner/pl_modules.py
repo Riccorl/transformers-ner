@@ -25,8 +25,16 @@ class NERModule(pl.LightningModule):
         # metrics
         self.f1 = F1(len(self.labels))
 
-    def forward(self, inputs, *args, **kwargs) -> torch.Tensor:
-        x = self.language_model(**inputs).word_embeddings
+    def forward(
+        self,
+        input_ids: torch.Tensor = None,
+        attention_mask: torch.Tensor = None,
+        token_type_ids: torch.Tensor = None,
+        offsets: torch.Tensor = None,
+        *args,
+        **kwargs
+    ) -> torch.Tensor:
+        x = self.language_model(input_ids, offsets, attention_mask, token_type_ids).word_embeddings
         x = self.dropout(x)
         x = self.classifier(x)
         return x
@@ -49,7 +57,7 @@ class NERModule(pl.LightningModule):
 
     def shared_step(self, batch: dict):
         x, y = batch
-        y_hat = self.forward(x)
+        y_hat = self.forward(**x)
         loss = F.cross_entropy(y_hat.view(-1, len(self.labels)), y.view(-1))
         y_hat = torch.argmax(y_hat, dim=-1)
         f1_score = []

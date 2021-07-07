@@ -78,7 +78,7 @@ def train(conf: omegaconf.DictConfig) -> None:
         # export_path = Path(logger.save_dir) / logger.name / logger.version / "files"
         export_path.mkdir(parents=True, exist_ok=True)
         best_model = NERModule.load_from_checkpoint(
-            model_checkpoint_callback.best_model_path, labels=pl_data_module.labels
+            model_checkpoint_callback.best_model_path, labels=pl_data_module.label_dict
         )
         torch.save(
             best_model.state_dict(),
@@ -111,8 +111,8 @@ def train(conf: omegaconf.DictConfig) -> None:
                 "token_type_ids",
                 "offsets",
             ],  # the model's input names
-            output_names=["synsets"],  # the model's output names
-            verbose=True,
+            output_names=["ner_tags"],  # the model's output names
+            verbose=False,
             dynamic_axes={
                 "input_ids": {
                     0: "batch_size",
