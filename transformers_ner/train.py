@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -20,8 +21,13 @@ from pl_modules import NERModule
 def train(conf: omegaconf.DictConfig) -> None:
     # fancy logger
     console = Console()
+
     # reproducibility
     pl.seed_everything(conf.train.seed)
+    set_determinism_the_old_way(conf.train.trainer.deterministic)
+    # trainer determinism to False to avoid errors
+    conf.train.trainer.deterministic = False
+
     console.log(f"Starting training for [bold cyan]{conf.train.model_name}[/bold cyan] model")
     if conf.train.pl_trainer.fast_dev_run:
         console.log(f"Debug mode {conf.train.pl_trainer.fast_dev_run}. Forcing debugger configuration")
@@ -146,6 +152,15 @@ def train(conf: omegaconf.DictConfig) -> None:
                 weight_type=QuantType.QUInt8,
                 optimize_model=True,
             )
+
+
+def set_determinism_the_old_way(deterministic: bool):
+    # determinism for cudnn
+    torch.backends.cudnn.deterministic = deterministic
+    if deterministic:
+        # fixing non-deterministic part of horovod
+        # https://github.com/PyTorchLightning/pytorch-lightning/pull/1572/files#r420279383
+        os.environ["HOROVOD_FUSION_THRESHOLD"] = str(0)
 
 
 _onnx_available = importlib.util.find_spec("onnx") is not None
