@@ -24,9 +24,9 @@ def train(conf: omegaconf.DictConfig) -> None:
 
     # reproducibility
     pl.seed_everything(conf.train.seed)
-    set_determinism_the_old_way(conf.train.trainer.deterministic)
+    set_determinism_the_old_way(conf.train.pl_trainer.deterministic)
     # trainer determinism to False to avoid errors
-    conf.train.trainer.deterministic = False
+    conf.train.pl_trainer.deterministic = False
 
     console.log(f"Starting training for [bold cyan]{conf.train.model_name}[/bold cyan] model")
     if conf.train.pl_trainer.fast_dev_run:
