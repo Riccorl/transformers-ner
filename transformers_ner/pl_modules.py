@@ -1,11 +1,10 @@
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-import transformer_embedder as tre
+import transformers_embedder as tre
 from torch import nn
+from torch.optim import RAdam
 from torchmetrics.classification import F1
-
-from optimizers import RAdam
 
 
 class NERModule(pl.LightningModule):
@@ -14,9 +13,9 @@ class NERModule(pl.LightningModule):
         self.save_hyperparameters()
         self.labels = labels
         # layers
-        self.language_model = tre.TransformerEmbedder(
+        self.language_model = tre.TransformersEmbedder(
             self.hparams.language_model_name,
-            subtoken_pooling=self.hparams.subtoken_pooling,
+            return_words=self.hparams.return_words,
             output_layer=self.hparams.output_layer,
             fine_tune=self.hparams.lm_fine_tune,
         )

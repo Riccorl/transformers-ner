@@ -1,14 +1,16 @@
-name: distilbert
-
+# Required to make the "experiments" dir the default one for the output of the models
 hydra:
   run:
-    dir: ./experiments/${name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ./experiments/${train.model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+model_name: distilbert
 
 defaults:
+  - _self_
   - train: default
   - model: distilbert
   - data: conll2003_ner
   - evaluate: default
   - logging: wandb_logging
-  - hydra/job_logging: colorlog
-  - hydra/hydra_logging: colorlog
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog

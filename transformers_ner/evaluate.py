@@ -43,10 +43,8 @@ def predict(conf: omegaconf.DictConfig):
         sentence_length += x["sentence_length"]
 
     # overall score print
-    log.info("Overal scores")
-    scores = compute_metrics(
-        predictions, labels, sentence_length, data_module.label_dict_inverted, metric
-    )
+    log.info("Overall scores")
+    scores = compute_metrics(predictions, labels, sentence_length, data_module.label_dict_inverted, metric)
     for k, v in scores.items():
         log.info(f"{k}: {v}")
 

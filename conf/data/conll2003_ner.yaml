@@ -1,9 +1,18 @@
-# @package _group_
-
 datamodule:
   _target_: pl_data_modules.NERDataModule
+
   language_model_name: ${model.language_model_name}
+
   task: "ner"
+
   dataset: "conll2003"
-  batch_size: 16
-  num_workers: 4
+
+  batch_sizes:
+    train: 32
+    dev: 32
+    test: 32
+
+  num_workers:
+    train: 4
+    dev: 4
+    test: 4

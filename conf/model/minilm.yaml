@@ -1,12 +1,9 @@
-# @package _group_
-
 _target_: pl_modules.NERModule
-
-# my typical model feature
 language_model_name: 'microsoft/MiniLM-L12-H384-uncased'
+return_words: True
+output_layer: 'sum'
+# learning hyper-parameters
 lr: 2e-4
 lm_lr: 1e-5
 weight_decay: 0
 lm_fine_tune: True
-subtoken_pooling: 'mean'
-output_layer: 'sum'

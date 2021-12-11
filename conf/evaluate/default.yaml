@@ -1,6 +1,3 @@
-# @package _group_
-
 checkpoint_path: "path/to/checkpoint"
-
 # core
 gpus: 1

@@ -2,38 +2,19 @@ from typing import Any, Union, List, Optional
 
 import pytorch_lightning as pl
 import torch
-import transformer_embedder as tre
+import transformers_embedder as tre
 from datasets import load_dataset
+from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 
 
 class NERDataModule(pl.LightningDataModule):
-    """
-    FROM LIGHTNING DOCUMENTATION
-
-    A DataModule standardizes the training, val, test splits, data preparation and transforms.
-    The main advantage is consistent data splits, data preparation and transforms across models.
-
-    A DataModule implements 5 key methods:
-
-    * **prepare_data** (things to do on 1 GPU/TPU not on every GPU/TPU in distributed mode).
-    * **setup**  (things to do on every accelerator in distributed mode).
-    * **train_dataloader** the training dataloader.
-    * **val_dataloader** the val dataloader(s).
-    * **test_dataloader** the test dataloader(s).
-
-
-    This allows you to share a full dataset without explaining how to download,
-    split transform and process the data
-
-    """
-
     def __init__(
         self,
         dataset: str,
         language_model_name: str,
-        batch_size: int,
-        num_workers: int,
+        batch_sizes: DictConfig,
+        num_workers: DictConfig,
         *args,
         **kwargs
     ):
@@ -47,16 +28,14 @@ class NERDataModule(pl.LightningDataModule):
         # params
         self.dataset = dataset
         self.language_model_name = language_model_name
-        self.batch_size = batch_size
+        self.batch_sizes = batch_sizes
         self.num_workers = num_workers
         # tokenizer
         self.tokenizer = tre.Tokenizer(language_model_name)
 
     def prepare_data(self, *args, **kwargs):
         datasets = load_dataset(self.dataset)
-        self.label_dict = {
-            n: i for i, n in enumerate(datasets["train"].features["ner_tags"].feature.names)
-        }
+        self.label_dict = {n: i for i, n in enumerate(datasets["train"].features["ner_tags"].feature.names)}
         self.label_dict_inverted = {
             i: n for i, n in enumerate(datasets["train"].features["ner_tags"].feature.names)
         }
@@ -70,29 +49,29 @@ class NERDataModule(pl.LightningDataModule):
     def train_dataloader(self, *args, **kwargs) -> DataLoader:
         return DataLoader(
             self.train_data,
-            batch_size=self.batch_size,
+            batch_size=self.batch_sizes.train,
             collate_fn=self.collate_fn,
-            num_workers=self.num_workers,
+            num_workers=self.num_workers.train,
             shuffle=True,
         )
 
     def val_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         return DataLoader(
             self.dev_data,
-            batch_size=self.batch_size,
+            batch_size=self.batch_sizes.dev,
             collate_fn=self.collate_fn,
-            num_workers=self.num_workers,
+            num_workers=self.num_workers.dev,
         )
 
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         return DataLoader(
             self.test_data,
-            batch_size=self.batch_size,
+            batch_size=self.batch_sizes.test,
             collate_fn=self.collate_fn,
-            num_workers=self.num_workers,
+            num_workers=self.num_workers.test,
         )
 
-    def transfer_batch_to_device(self, batch: Any, device: Optional[torch.device] = None) -> Any:
+    def transfer_batch_to_device(self, batch: Any, device: torch.device, dataloader_idx: int) -> Any:
         return tuple(b.to(device) for b in batch)
 
     def collate_fn(self, batch):
