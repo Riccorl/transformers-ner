@@ -1,5 +1,6 @@
 _target_: models.pl_modules.NERModule
-language_model_name: 'microsoft/Multilingual-MiniLM-L12-H384'
+#language_model_name: 'microsoft/Multilingual-MiniLM-L12-H384'
+language_model_name: 'nreimers/mMiniLMv2-L6-H384-distilled-from-XLMR-Large'
 return_words: True
 layer_pooling_strategy: 'mean'
 # learning hyper-parameters
@@ -7,3 +8,4 @@ lr: 2e-4
 lm_lr: 1e-5
 weight_decay: 0
 lm_fine_tune: True
+lm_weight_decay: 0.1

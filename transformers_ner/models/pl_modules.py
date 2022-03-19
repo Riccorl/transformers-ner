@@ -22,7 +22,7 @@ class NERModule(pl.LightningModule):
             layer_pooling_strategy=self.hparams.layer_pooling_strategy,
             fine_tune=self.hparams.lm_fine_tune,
         )
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.5)
         self.classifier = nn.Linear(
             self.language_model.hidden_size, self.labels.get_label_size(), bias=False
         )
@@ -83,10 +83,12 @@ class NERModule(pl.LightningModule):
             {
                 "params": self.classifier.parameters(),
                 "lr": self.hparams.lr,
+                "weight_decay": self.hparams.weight_decay,
             },
             {
                 "params": self.language_model.parameters(),
                 "lr": self.hparams.lm_lr,
+                "weight_decay": self.hparams.lm_weight_decay,
                 "correct_bias": False,
             },
         ]

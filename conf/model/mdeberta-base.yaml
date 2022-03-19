@@ -1,5 +1,5 @@
 _target_: models.pl_modules.NERModule
-language_model_name: 'microsoft/MiniLM-L12-H384-uncased'
+language_model_name: 'microsoft/mdeberta-v3-base'
 return_words: True
 layer_pooling_strategy: 'mean'
 # learning hyper-parameters

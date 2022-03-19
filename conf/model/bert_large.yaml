@@ -7,3 +7,4 @@ lr: 2e-4
 lm_lr: 1e-5
 weight_decay: 0
 lm_fine_tune: True
+lm_weight_decay: 0.1
