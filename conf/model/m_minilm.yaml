@@ -1,7 +1,7 @@
-_target_: pl_modules.NERModule
+_target_: models.pl_modules.NERModule
 language_model_name: 'microsoft/Multilingual-MiniLM-L12-H384'
 return_words: True
-output_layer: 'sum'
+layer_pooling_strategy: 'mean'
 # learning hyper-parameters
 lr: 2e-4
 lm_lr: 1e-5

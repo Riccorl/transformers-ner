@@ -1,5 +1,5 @@
 _target_: models.pl_modules.NERModule
-language_model_name: 'distilbert-base-cased'
+language_model_name: 'bert-large-cased'
 return_words: True
 layer_pooling_strategy: 'mean'
 # learning hyper-parameters

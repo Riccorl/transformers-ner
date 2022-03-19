@@ -15,7 +15,7 @@ conda activate "$ENV_NAME"
 
 # replace placeholder env with $ENV_NAME in scripts/train.sh
 NEW_CONDA_LINE="source \$CONDA_BASE/bin/activate $ENV_NAME"
-sed -i '' "s,.*bin/activate.*,$NEW_CONDA_LINE,g" scripts/train.sh
+sed -i.bak -e "s,.*bin/activate.*,$NEW_CONDA_LINE,g" scripts/train.sh
 
 # install torch
 read -rp "Enter cuda version (e.g. '11.3', default no cuda support): " CUDA_VERSION

@@ -1,5 +1,5 @@
 datamodule:
-  _target_: pl_data_modules.NERDataModule
+  _target_: data.pl_data_modules.NERDataModule
 
   language_model_name: ${model.language_model_name}
 

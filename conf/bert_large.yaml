@@ -1,0 +1,16 @@
+# Required to make the "experiments" dir the default one for the output of the models
+hydra:
+  run:
+    dir: ./experiments/${train.model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+model_name: bert-base
+
+defaults:
+  - _self_
+  - train: default
+  - model: bert_large
+  - data: conll2003_ner
+  - evaluate: default
+  - logging: wandb_logging
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
