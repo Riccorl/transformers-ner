@@ -1,17 +1,25 @@
+from typing import Dict, List, Union
 from datasets import load_metric
 
 from data.labels import Labels
 
 
 class SeqevalScorer:
-    def __init__(self, labels: Labels):
-        self.scorer = load_metric("seqeval")
-        self.labels = labels
+    def __init__(self):
+        self.metric = load_metric("seqeval")
 
-    def __call__(self, predictions, golds, *args, **kwargs):
-        true_predictions = []
-        true_labels = []
-        for prediction, label in zip(predictions, golds):
-            true_predictions.append([self.labels.get_label_from_index(p) for p in prediction])
-            true_labels.append([self.labels.get_label_from_index(l) for l in label])
-        return self.scorer.compute(predictions=true_predictions, references=true_labels)
+    def __call__(
+        self,
+        predictions: Union[List[str], List[List[str]]],
+        references: Union[List[str], List[List[str]]],
+    ) -> Dict:
+        """
+        Args:
+            predictions (:obj:`List[str]`, :obj:`List[List[str]]`):
+                The predictions of the model.
+            references (:obj:`List[str]`, :obj:`List[List[str]]`):
+                The ground truth.
+        Returns:
+            :obj:`Dict`: a dictionary containing the name of the metrics and their values
+        """
+        return self.metric.compute(predictions=predictions, references=references)

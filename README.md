@@ -49,6 +49,7 @@ These models are trained for 10 epochs, using RAdam with a learning rate of `1e-
 | Language Model 	| F1   	| Inference Time (GPU) 	|
 |----------------	|------	|----------------------	|
 | MiniLM         	| 90.0 	|          6s          	|
+| M-MiniLM        | 88.2 	|          6s          	|
 | DistilBERT     	| 88.9  |          6s          	|
-| BERT-base      	|      	|                      	|
+| BERT-base      	| 90.1 	|                      	|
 | RoBERTa-large   | 91.4 	|          24s         	|

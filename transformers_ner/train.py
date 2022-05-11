@@ -17,6 +17,9 @@ from rich.console import Console
 
 from data.pl_data_modules import NERDataModule
 from models.pl_modules import NERModule
+from rich.pretty import pprint
+from rich.console import Console
+from rich.table import Table
 
 
 def train(conf: omegaconf.DictConfig) -> None:
@@ -24,8 +27,8 @@ def train(conf: omegaconf.DictConfig) -> None:
     console = Console()
     # reproducibility
     pl.seed_everything(conf.train.seed)
-    set_determinism_the_old_way(conf.train.pl_trainer.deterministic)
-    conf.train.pl_trainer.deterministic = False
+    # set_determinism_the_old_way(conf.train.pl_trainer.deterministic)
+    # conf.train.pl_trainer.deterministic = False
 
     console.log(f"Starting training for [bold cyan]{conf.train.model_name}[/bold cyan] model")
     if conf.train.pl_trainer.fast_dev_run:
@@ -40,6 +43,13 @@ def train(conf: omegaconf.DictConfig) -> None:
         conf.logging.log = None
         # remove model checkpoint callback
         conf.train.model_checkpoint_callback = None
+
+    # table = Table(show_header=True, header_style="bold")
+    # table.add_column("Parameter")
+    # table.add_column("Value")
+    # for param, value in conf.items():
+    #     table.add_row(str(param), str(value))
+    # console.print(table)
 
     # data module declaration
     console.log(f"Instantiating the Data Module")
@@ -94,76 +104,75 @@ def train(conf: omegaconf.DictConfig) -> None:
     # module fit
     trainer.fit(pl_module, datamodule=pl_data_module)
 
-    # module test
-    trainer.test(pl_module, datamodule=pl_data_module)
-
-    if conf.train.export and not conf.train.pl_trainer.fast_dev_run:
-        # export model stuff
-        # export best model weights
-        # export_path = Path(logger.save_dir) / logger.name / logger.version / "files"
-        best_model = NERModule.load_from_checkpoint(
+    if model_checkpoint_callback:
+        # load best model for testing
+        best_pl_module = NERModule.load_from_checkpoint(
             model_checkpoint_callback.best_model_path, labels=pl_data_module.labels
         )
-        torch.save(
-            best_model.state_dict(),
-            model_export / "weights.pt",
-        )
-        if is_onnx_available():
-            from onnxruntime.quantization import quantize_dynamic, QuantType
+    else:
+        best_pl_module = pl_module
 
-            inputs, _ = next(iter(pl_data_module.train_dataloader()))
-            dynamic_axes = {
-                "input_ids": {
-                    0: "batch_size",
-                    1: "batch_length",
-                },  # variable length axes
-                "attention_mask": {
-                    0: "batch_size",
-                    1: "batch_length",
-                },  # variable length axes
-                "token_type_ids": {
-                    0: "batch_size",
-                    1: "batch_length",
-                },  # variable length axes
-                "offsets": {
-                    0: "batch_size",
-                    1: "batch_length",
-                },  # variable length axes
-                "ner_tags": {
-                    0: "batch_size",
-                    1: "batch_length",
-                },  # variable length axes
-            }
-            # onnx accepts only Tuples
-            onnx_inputs = (
-                inputs.input_ids,
-                inputs.attention_mask,
-                inputs.token_type_ids if hasattr(inputs, "token_type_ids") else None,
-                inputs.offsets,
-            )
-            input_names = ["input_ids", "attention_mask", "token_type_ids", "offsets"]
+    # module test
+    trainer.test(best_pl_module, datamodule=pl_data_module)
 
-            # export onnx
-            torch.onnx.export(
-                best_model,
-                onnx_inputs,
-                model_export / "weights.onnx",
-                export_params=True,  # store the trained parameter weights inside the model file
-                opset_version=15,  # the ONNX version to export the model to
-                do_constant_folding=True,  # whether to execute constant folding for optimization
-                input_names=input_names,  # the model's input names
-                output_names=["ner_tags"],  # the model's output names
-                verbose=False,
-                dynamic_axes=dynamic_axes,
-            )
-            quantize_dynamic(
-                model_input=model_export / "weights.onnx",
-                model_output=model_export / "weights.quantized.onnx",
-                per_channel=True,
-                activation_type=QuantType.QUInt8,
-                weight_type=QuantType.QUInt8,
-                optimize_model=True,
-            )
+    # if conf.train.export and not conf.train.pl_trainer.fast_dev_run:
+    #     # export model stuff
+    #     best_model = best_pl_module.model
+    #     torch.save(
+    #         best_model.state_dict(),
+    #         model_export / "weights.pt",
+    #     )
+    #     if is_onnx_available():
+    #         from onnxruntime.quantization import quantize_dynamic, QuantType
+
+    #         inputs = next(iter(pl_data_module.train_dataloader()))
+    #         dynamic_axes = {
+    #             "input_ids": {
+    #                 0: "batch_size",
+    #                 1: "batch_length",
+    #             },  # variable length axes
+    #             "attention_mask": {
+    #                 0: "batch_size",
+    #                 1: "batch_length",
+    #             },  # variable length axes
+    #             "offsets": {
+    #                 0: "batch_size",
+    #                 1: "batch_length",
+    #             },  # variable length axes
+    #             "ner_tags": {
+    #                 0: "batch_size",
+    #                 1: "batch_length",
+    #             },  # variable length axes
+    #         }
+    #         # onnx accepts only Tuples
+    #         onnx_inputs = (
+    #             inputs.input_ids,
+    #             inputs.attention_mask,
+    #             inputs.offsets,
+    #         )
+    #         input_names = ["input_ids", "attention_mask", "offsets"]
+
+    #         # export onnx
+    #         torch.onnx.export(
+    #             best_model,
+    #             onnx_inputs,
+    #             model_export / "weights.onnx",
+    #             export_params=True,  # store the trained parameter weights inside the model file
+    #             opset_version=15,  # the ONNX version to export the model to
+    #             do_constant_folding=True,  # whether to execute constant folding for optimization
+    #             input_names=input_names,  # the model's input names
+    #             output_names=["ner_tags"],  # the model's output names
+    #             verbose=False,
+    #             dynamic_axes=dynamic_axes,
+    #         )
+    #         quantize_dynamic(
+    #             model_input=model_export / "weights.onnx",
+    #             model_output=model_export / "weights.quantized.onnx",
+    #             per_channel=True,
+    #             activation_type=QuantType.QUInt8,
+    #             weight_type=QuantType.QUInt8,
+    #             optimize_model=True,
+    #         )
 
 
 def set_determinism_the_old_way(deterministic: bool):

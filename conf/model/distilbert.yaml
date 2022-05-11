@@ -1,10 +1,17 @@
 _target_: models.pl_modules.NERModule
-language_model_name: 'distilbert-base-cased'
-return_words: True
-layer_pooling_strategy: 'mean'
-# learning hyper-parameters
-lr: 2e-4
-lm_lr: 1e-5
-weight_decay: 0
-lm_fine_tune: True
-lm_weight_decay: 0.1
+
+model:
+  _target_: models.models.TransformersNER
+  language_model: 'distilbert-base-cased'
+  return_words: True
+  layer_pooling_strategy: 'mean'
+  fine_tune: True
+  dropout: 0.1
+  use_viterbi: True
+
+optim_params:
+  optimizer: 'radam'
+  lr: 2e-4
+  lm_lr: 3e-5
+  lm_weight_decay: 0.0
+  weight_decay: 0

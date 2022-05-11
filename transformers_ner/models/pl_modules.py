@@ -1,3 +1,5 @@
+from operator import length_hint
+from typing import Dict, List, Union
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
@@ -8,6 +10,8 @@ from torchmetrics.classification import F1Score
 
 from data.labels import Labels
 from scorer import SeqevalScorer
+from models.viterbi import ViterbiDecoder
+import hydra
 
 
 class NERModule(pl.LightningModule):
@@ -15,81 +19,118 @@ class NERModule(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.labels = labels
-        # layers
-        self.language_model = tre.TransformersEncoder(
-            self.hparams.language_model_name,
-            return_words=self.hparams.return_words,
-            layer_pooling_strategy=self.hparams.layer_pooling_strategy,
-            fine_tune=self.hparams.lm_fine_tune,
-        )
-        self.dropout = nn.Dropout(0.5)
-        self.classifier = nn.Linear(
-            self.language_model.hidden_size, self.labels.get_label_size(), bias=False
-        )
+        # model
+        self.model = hydra.utils.instantiate(self.hparams.model, labels=labels)
         # metrics
-        self.seqeval_scorer = SeqevalScorer(self.labels)
+        self.seqeval_scorer = SeqevalScorer()
 
-    def forward(
-        self,
-        input_ids: torch.Tensor = None,
-        attention_mask: torch.Tensor = None,
-        token_type_ids: torch.Tensor = None,
-        offsets: torch.Tensor = None,
-        *args,
-        **kwargs,
-    ) -> torch.Tensor:
-        x = self.language_model(input_ids, attention_mask, token_type_ids, offsets).word_embeddings
-        x = self.dropout(x)
-        x = self.classifier(x)
-        return x
+    def forward(self, **kwargs) -> Dict[str, torch.Tensor]:
+        """
+        Forward pass of the model.
+
+        Returns:
+            obj:`torch.Tensor`: The outputs of the model.
+        """
+        return self.model(**kwargs)
 
     def training_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
-        loss, seqeval_scores = self.shared_step(batch)
-        self.log("val_loss", loss)
-        for metric_name, metric_value in seqeval_scores.items():
-            if "overall_" in metric_name:
-                self.log(metric_name, metric_value, prog_bar=True)
-        return loss
+        # training kwargs
+        training_kwargs = {**batch, "compute_loss": True}
+        outputs = self.forward(**training_kwargs)
+        self.log("loss", outputs["loss"])
+        return outputs["loss"]
 
     def validation_step(self, batch: dict, batch_idx: int) -> None:
-        loss, seqeval_scores = self.shared_step(batch)
-        self.log("val_loss", loss)
-        for metric_name, metric_value in seqeval_scores.items():
+        # val kwargs
+        val_kwargs = {
+            **batch,
+            "compute_loss": True,
+            "compute_predictions": True,
+        }
+        batch_size = len(batch.input_ids)
+        # get output from model
+        outputs = self.forward(**val_kwargs)
+        self.log("val_loss", outputs["loss"], batch_size=batch_size)
+        # compute f1 score
+        metrics = self.compute_f1_score(
+            outputs["predictions"], batch["labels"], batch["sentence_lengths"]
+        )
+        for metric_name, metric_value in metrics.items():
             if "overall_" in metric_name:
-                self.log(f"val_{metric_name}", metric_value, prog_bar=True)
+                self.log(f"val_{metric_name}", metric_value, prog_bar=True, batch_size=batch_size)
 
     def test_step(self, batch: dict, batch_idx: int) -> None:
-        loss, seqeval_scores = self.shared_step(batch)
-        self.log("test_loss", loss)
-        for metric_name, metric_value in seqeval_scores.items():
+        # test kwargs
+        test_kwargs = {
+            **batch,
+            "compute_loss": True,
+            "compute_predictions": True,
+        }
+        batch_size = len(batch.input_ids)
+        # get output from model
+        outputs = self.forward(**test_kwargs)
+        self.log("test_loss", outputs["loss"], batch_size=batch_size)
+        # compute f1 score
+        metrics = self.compute_f1_score(
+            outputs["predictions"], batch["labels"], batch["sentence_lengths"]
+        )
+        for metric_name, metric_value in metrics.items():
             if "overall_" in metric_name:
-                self.log(f"test_{metric_name}", metric_value, prog_bar=True)
+                self.log(f"test_{metric_name}", metric_value, prog_bar=True, batch_size=batch_size)
 
-    def shared_step(self, batch: dict):
-        x, y = batch
-        y_hat = self.forward(**x)
-        loss = F.cross_entropy(y_hat.view(-1, self.labels.get_label_size()), y.view(-1))
-        # compute seqeval metrics
-        y_hat = torch.argmax(y_hat, dim=-1)
-        predictions, labels = [], []
-        for i, sentence_length in enumerate(x["sentence_lengths"]):
-            predictions.append(y_hat[i, :sentence_length])
-            labels.append(y[i, :sentence_length])
-        seqeval_scores = self.seqeval_scorer(predictions, labels)
-        return loss, seqeval_scores
+    def compute_f1_score(
+        self,
+        predictions: Union[List, torch.Tensor],
+        labels: Union[List, torch.Tensor],
+        sentence_lengths: List,
+    ) -> Dict:
+        # we need to convert them to strings
+        # if it is a tensor, we need to convert it to a list
+        if isinstance(predictions, torch.Tensor):
+            predictions = predictions.cpu().tolist()
+        # then we retrieve the named labels
+        predictions = [
+            [self.labels.get_label_from_index(p) for p in preds[:length]]
+            for preds, length in zip(predictions, sentence_lengths)
+        ]
+        # same for labels
+        labels[labels == -100] = 0
+        if isinstance(labels, torch.Tensor):
+            labels = labels.cpu().tolist()
+        labels = [
+            [self.labels.get_label_from_index(l) for l in label[:length]]
+            for label, length in zip(labels, sentence_lengths)
+        ]
+        # return scores
+        metrics = self.seqeval_scorer(predictions, labels)
+        return metrics
 
     def configure_optimizers(self):
-        groups = [
+        base_parameters = []
+        lm_decay_parameters = []
+        lm_no_decay_parameters = []
+
+        for parameter_name, parameter in self.named_parameters():
+            if "transformer" not in parameter_name:
+                base_parameters.append(parameter)
+            elif not any(v in parameter_name for v in ["bias", "LayerNorm.weight"]):
+                lm_decay_parameters.append(parameter)
+            else:
+                lm_no_decay_parameters.append(parameter)
+
+        optimizer_params = [
+            {"params": base_parameters, "weight_decay": self.hparams.optim_params.weight_decay},
             {
-                "params": self.classifier.parameters(),
-                "lr": self.hparams.lr,
-                "weight_decay": self.hparams.weight_decay,
+                "params": lm_decay_parameters,
+                "lr": self.hparams.optim_params.lm_lr,
+                "weight_decay": self.hparams.optim_params.lm_weight_decay,
             },
             {
-                "params": self.language_model.parameters(),
-                "lr": self.hparams.lm_lr,
-                "weight_decay": self.hparams.lm_weight_decay,
-                "correct_bias": False,
+                "params": lm_no_decay_parameters,
+                "lr": self.hparams.optim_params.lm_lr,
+                "weight_decay": 0.0,
             },
         ]
-        return RAdam(groups)
+
+        optimizer = RAdam(optimizer_params, lr=self.hparams.optim_params.lr)
+        return optimizer

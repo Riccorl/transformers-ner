@@ -3,9 +3,14 @@ datamodule:
 
   language_model_name: ${model.model.language_model}
 
+  dataset:
+    _target_: data.datasets.MultiCoNERDataset
+    name: "multiconer"
+    train_paths: "data/multiconer/train.tsv"
+    dev_paths: "data/multiconer/dev.tsv"
+    test_paths: "data/multiconer/test.tsv"
+  
   task: "ner"
-
-  dataset: "conll2003"
 
   batch_sizes:
     train: 32
