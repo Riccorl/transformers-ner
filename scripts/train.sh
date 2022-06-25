@@ -4,22 +4,24 @@
 # checkmark font for fancy log
 CHECK_MARK="\033[0;32m\xE2\x9C\x94\033[0m"
 # usage text
-USAGE="$(basename "$0") CONFIG_NAME [-h] [-d] [-p PRECISION] [-c] [-m GPU_MEM] [-o]
+USAGE="$(basename "$0") LANG_MODEL_NAME [-h] [-d] [-p PRECISION] [-c] [-m GPU_MEM] [-o]
 
 where:
-    CONFIG_NAME   Configuration name (one of the configuration files in .config)
+    LANG_MODEL_NAME   Language model name (one of the models from HuggingFace)
     -h            Show this help text
     -d            Run in debug mode (no GPU and wandb offline)
     -p            Training precision, default 16.
     -c            Use CPU instead of GPU.
-    -g            Which GPU to use, default [0].
+    -g            How many GPU to use, default 1. If 0, use CPU.
+    -n            How many nodes to use, default 1.
     -m            Minimum GPU memory required in MB (default: 8000). If less that this,
                   training will wait until there is enough space.
+    -s            Strategy to use for distributed training, default NULL.
     -o            Run the experiment offline
 
 Example:
-  ./script/train.sh root
-  ./script/train.sh root -m 10000
+  ./script/train.sh bert-base-cased
+  ./script/train.sh bert-base-cased -m 10000
 "
 
 # check for named params
@@ -39,10 +41,16 @@ while [ $OPTIND -le "$#" ]; do
       USE_CPU="True"
       ;;
     g)
-      GPUS="[$OPTARG]"
+      DEVICES="$OPTARG"
+      ;;
+    n)
+      NODES="$OPTARG"
       ;;
     m)
       GPU_MEM="$OPTARG"
+      ;;
+    s)
+      STRATEGY="$OPTARG"
       ;;
     o)
       WANDB="offline"
@@ -52,7 +60,7 @@ while [ $OPTIND -le "$#" ]; do
       ;;
     esac
   else
-    CONFIG_NAME=${*:$OPTIND:1}
+    LANG_MODEL_NAME=${*:$OPTIND:1}
     ((OPTIND++))
   fi
 done
@@ -61,8 +69,11 @@ done
 CONDA_BASE=$(conda info --base)
 source $CONDA_BASE/bin/activate ner
 
-## if CONFIG_NAME is not specified, abort
-if [ -z "$CONFIG_NAME" ]; then
+# Default device is GPU
+ACCELERATOR="gpu"
+
+## if LANG_MODEL_NAME is not specified, abort
+if [ -z "$LANG_MODEL_NAME" ]; then
   printf "A configuration name must be specified.\n\n"
   printf "%s$USAGE"
   exit 0
@@ -86,10 +97,16 @@ if [ -z "$USE_CPU" ]; then
   USE_CPU=False
 fi
 
-# if -g is not specified, GPUS is 1
-if [ -z "$GPUS" ]; then
+# if -g is not specified, DEVICES is 1
+if [ -z "$DEVICES" ]; then
   # default value
-  GPUS="[0]"
+  DEVICES=1
+fi
+
+# if -n is not specified, NODES is 1
+if [ -z "$NODES" ]; then
+  # default value
+  NODES=1
 fi
 
 # if -m is not specified, GPU_MEM is not limited
@@ -108,13 +125,25 @@ fi
 # if -d then GPU is not required and no output dir
 if [ "$DEV_RUN" = "True" ]; then
   WANDB="offline"
+  DEVICES=1
+  PRECISION=32
+  ACCELERATOR="cpu"
+  NODES=1
 fi
 
-# if -c GPUS is 0 (no GPU) and PRECISION is 32
+# if -s is not specified, STRATEGY is None
+if [ -z "$STRATEGY" ]; then
+  # default value
+  STRATEGY="null"
+fi
+
+# if -g DEVICES is 0 (no GPU) and PRECISION is 32
 if [ "$USE_CPU" = "True" ]; then
   # default value
-  GPUS=0
+  DEVICES=1
   PRECISION=32
+  ACCELERATOR="cpu"
+  STRATEGY="null"
 fi
 
 if type nvidia-smi >/dev/null 2>&1; then
@@ -122,8 +151,8 @@ if type nvidia-smi >/dev/null 2>&1; then
 else
   FREE_MEM=0
   GPU_MEM=0
-  GPUS=0
   PRECISION=32
+  ACCELERATOR="cpu"
   if [ $USE_CPU = "False" ]; then
     echo -e "GPU not found, fallback to CPU.\n"
   fi
@@ -136,11 +165,13 @@ GPU_RAM_MESSAGE=""
 cat <<EOF
 Configuration:
 ------------------------------------------------
-Configuration name:   $CONFIG_NAME
+Language model name:  $LANG_MODEL_NAME
 Run in debug mode:    $DEV_RUN
 Requested VRAM:       $GPU_MEM MB
 Available VRAM:       $FREE_MEM MB
 Precision:            $PRECISION bit
+Number of GPUs:       $DEVICES
+Number of nodes:      $NODES
 Use CPU:              $USE_CPU
 W&B Mode:             $WANDB
 
@@ -175,18 +206,26 @@ echo -e "$GPU_RAM_MESSAGE${CHECK_MARK} Starting.\n"
 
 if [ "$DEV_RUN" = "True" ]; then
   export HYDRA_FULL_ERROR=1
-  python transformers_ner/train.py --config-name="$CONFIG_NAME" \
+  python transformers_ner/train.py \
+    "model.model.language_model=$LANG_MODEL_NAME" \
     "train.pl_trainer.fast_dev_run=$DEV_RUN" \
-    "train.pl_trainer.gpus=$GPUS" \
+    "train.pl_trainer.devices=$DEVICES" \
+    "train.pl_trainer.accelerator=$ACCELERATOR" \
+    "train.pl_trainer.num_nodes=$NODES" \
+    "train.pl_trainer.strategy=$STRATEGY" \
     "train.pl_trainer.precision=$PRECISION" \
     "hydra.run.dir=." \
     "hydra.output_subdir=null" \
     "hydra/job_logging=disabled" \
     "hydra/hydra_logging=disabled"
 else
-  python transformers_ner/train.py --config-name="$CONFIG_NAME" \
+  python transformers_ner/train.py \
+    "model.model.language_model=$LANG_MODEL_NAME"  \
     "train.pl_trainer.fast_dev_run=$DEV_RUN" \
-    "train.pl_trainer.gpus=$GPUS" \
+    "train.pl_trainer.devices=$DEVICES" \
+    "train.pl_trainer.accelerator=$ACCELERATOR" \
+    "train.pl_trainer.num_nodes=$NODES" \
+    "train.pl_trainer.strategy=$STRATEGY" \
     "train.pl_trainer.precision=$PRECISION" \
     "logging.wandb_arg.mode=$WANDB"
 fi

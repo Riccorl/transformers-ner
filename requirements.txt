@@ -1,5 +1,5 @@
-torch>=1.10,<1.11
-pytorch-lightning>=1.5,<1.6
+torch>=1.11,<1.12
+pytorch-lightning>=1.6,<1.7
 hydra-core>=1.1,<1.2
 torchmetrics
 wandb
@@ -9,7 +9,7 @@ black
 # project dependencies
 datasets
 seqeval
-# transformers-embedder>=2.0,<2.1
+transformers-embedder>=3.0,<3.1
 sentencepiece
-onnx>=1.11,<1.12
-onnxruntime>=1.10,<1.12
+# onnx>=1.11,<1.12
+# onnxruntime>=1.10,<1.12

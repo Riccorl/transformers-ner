@@ -3,12 +3,12 @@ hydra:
   run:
     dir: ./experiments/${train.model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: bert-base
+model_name: ${model.model.language_model}
 
 defaults:
   - _self_
   - train: default
-  - model: bert_base
+  - model: default
   - data: conll2003_ner
   - evaluate: default
   - logging: wandb_logging

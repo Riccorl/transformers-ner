@@ -1,17 +1,13 @@
-from operator import length_hint
 from typing import Dict, List, Union
+
+import hydra
 import pytorch_lightning as pl
 import torch
-import torch.nn.functional as F
-import transformers_embedder as tre
-from torch import nn
 from torch.optim import RAdam
-from torchmetrics.classification import F1Score
+from transformers_embedder.tokenizer import ModelInputs
 
 from data.labels import Labels
-from scorer import SeqevalScorer
-from models.viterbi import ViterbiDecoder
-import hydra
+from utils.scorer import SeqevalScorer
 
 
 class NERModule(pl.LightningModule):
@@ -40,7 +36,7 @@ class NERModule(pl.LightningModule):
         self.log("loss", outputs["loss"])
         return outputs["loss"]
 
-    def validation_step(self, batch: dict, batch_idx: int) -> None:
+    def validation_step(self, batch: ModelInputs, batch_idx: int) -> None:
         # val kwargs
         val_kwargs = {
             **batch,
@@ -57,7 +53,12 @@ class NERModule(pl.LightningModule):
         )
         for metric_name, metric_value in metrics.items():
             if "overall_" in metric_name:
-                self.log(f"val_{metric_name}", metric_value, prog_bar=True, batch_size=batch_size)
+                self.log(
+                    f"val_{metric_name}",
+                    metric_value,
+                    prog_bar=True,
+                    batch_size=batch_size,
+                )
 
     def test_step(self, batch: dict, batch_idx: int) -> None:
         # test kwargs
@@ -76,7 +77,12 @@ class NERModule(pl.LightningModule):
         )
         for metric_name, metric_value in metrics.items():
             if "overall_" in metric_name:
-                self.log(f"test_{metric_name}", metric_value, prog_bar=True, batch_size=batch_size)
+                self.log(
+                    f"test_{metric_name}",
+                    metric_value,
+                    prog_bar=True,
+                    batch_size=batch_size,
+                )
 
     def compute_f1_score(
         self,
@@ -119,7 +125,10 @@ class NERModule(pl.LightningModule):
                 lm_no_decay_parameters.append(parameter)
 
         optimizer_params = [
-            {"params": base_parameters, "weight_decay": self.hparams.optim_params.weight_decay},
+            {
+                "params": base_parameters,
+                "weight_decay": self.hparams.optim_params.weight_decay,
+            },
             {
                 "params": lm_decay_parameters,
                 "lr": self.hparams.optim_params.lm_lr,

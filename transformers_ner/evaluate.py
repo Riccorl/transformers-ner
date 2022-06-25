@@ -4,7 +4,7 @@ import hydra
 import torch
 from omegaconf import omegaconf
 from tqdm import tqdm
-from scorer import SeqevalScorer
+from utils.scorer import SeqevalScorer
 
 from models.pl_modules import NERModule
 
@@ -17,7 +17,9 @@ def predict(conf: omegaconf.DictConfig):
     # model loading
     log.info("Using {} as device".format(device))
     log.info("Loading model")
-    model = NERModule.load_from_checkpoint(checkpoint_path=conf.evaluate.checkpoint_path)
+    model = NERModule.load_from_checkpoint(
+        checkpoint_path=conf.evaluate.checkpoint_path
+    )
     model.to(device)
     model.eval()
 
@@ -44,7 +46,7 @@ def predict(conf: omegaconf.DictConfig):
         log.info(f"{k}: {v}")
 
 
-@hydra.main(config_path="../conf", config_name="root")
+@hydra.main(config_path="../conf", config_name="default")
 def main(conf: omegaconf.DictConfig):
     predict(conf)
 

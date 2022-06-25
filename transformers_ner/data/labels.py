@@ -47,7 +47,9 @@ class Labels:
             :obj:`int`: The index of the label.
         """
         if namespace not in self._labels_to_index:
-            raise ValueError(f"Provided namespace {namespace} is not in the label dictionary.")
+            raise ValueError(
+                f"Provided namespace {namespace} is not in the label dictionary."
+            )
 
         if label not in self._labels_to_index[namespace]:
             raise ValueError(f"Provided label {label} is not in the label dictionary.")
@@ -68,7 +70,9 @@ class Labels:
             :obj:`str`: The string representation of the label.
         """
         if namespace not in self._index_to_labels:
-            raise ValueError(f"Provided namespace {namespace} is not in the label dictionary.")
+            raise ValueError(
+                f"Provided namespace {namespace} is not in the label dictionary."
+            )
 
         if index not in self._index_to_labels[namespace]:
             raise ValueError(f"Provided label {index} is not in the label dictionary.")
@@ -76,7 +80,9 @@ class Labels:
         return self._index_to_labels[namespace][index]
 
     def add_labels(
-        self, labels: Union[str, List[str], Set[str], Dict[str, int]], namespace: str = "labels"
+        self,
+        labels: Union[str, List[str], Set[str], Dict[str, int]],
+        namespace: str = "labels",
     ) -> List[int]:
         """
         Adds the labels in input in the label dictionary.
@@ -138,7 +144,9 @@ class Labels:
             :obj:`Dict[str, int]`: The label dictionary, from ``str`` to ``int``.
         """
         if namespace not in self._labels_to_index:
-            raise ValueError(f"Provided namespace `{namespace}` is not in the label dictionary.")
+            raise ValueError(
+                f"Provided namespace `{namespace}` is not in the label dictionary."
+            )
         return self._labels_to_index[namespace]
 
     def get_label_size(self, namespace: str = "labels") -> int:
@@ -153,7 +161,9 @@ class Labels:
             :obj:`int`: Number of labels.
         """
         if namespace not in self._labels_to_index:
-            raise ValueError(f"Provided namespace {namespace} is not in the label dictionary.")
+            raise ValueError(
+                f"Provided namespace {namespace} is not in the label dictionary."
+            )
         return len(self._labels_to_index[namespace])
 
     def get_namespaces(self) -> List[str]:

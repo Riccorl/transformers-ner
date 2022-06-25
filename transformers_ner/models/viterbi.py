@@ -19,7 +19,9 @@ class ViterbiDecoder:
         self.labels = labels
         self.namespace = namespace
         self.tranistion_matrix = (
-            self._make_transition_matrix(labels, namespace) if build_transition_matrix else None
+            self._make_transition_matrix(labels, namespace)
+            if build_transition_matrix
+            else None
         )
         self.start_transition_matrix = (
             self._make_start_transition_matrix(labels, namespace)
@@ -85,7 +87,10 @@ class ViterbiDecoder:
         if transition_matrix is None:
             transition_matrix = self.tranistion_matrix
 
-        if allowed_start_transitions is None and self.start_transition_matrix is not None:
+        if (
+            allowed_start_transitions is None
+            and self.start_transition_matrix is not None
+        ):
             allowed_start_transitions = self.start_transition_matrix
 
         if top_k is None:
@@ -167,7 +172,9 @@ class ViterbiDecoder:
         # Evaluate the scores for all possible paths.
         for timestep in range(1, sequence_length):
             # Add pairwise potentials to current scores.
-            summed_potentials = path_scores[timestep - 1].unsqueeze(2) + transition_matrix
+            summed_potentials = (
+                path_scores[timestep - 1].unsqueeze(2) + transition_matrix
+            )
             summed_potentials = summed_potentials.view(-1, num_tags)
 
             # Best pairwise potential path score from the previous timestep.
@@ -180,7 +187,10 @@ class ViterbiDecoder:
             # Warn the user if they have passed
             # invalid/extremely unlikely evidence.
             if tag_observations[timestep - 1] != -1 and observation != -1:
-                if transition_matrix[tag_observations[timestep - 1], observation] < -10000:
+                if (
+                    transition_matrix[tag_observations[timestep - 1], observation]
+                    < -10000
+                ):
                     logger.warning(
                         "The pairwise potential between tags you have passed as "
                         "observations is extremely unlikely. Double check your evidence "

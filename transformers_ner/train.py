@@ -27,33 +27,32 @@ def train(conf: omegaconf.DictConfig) -> None:
     console = Console()
     # reproducibility
     pl.seed_everything(conf.train.seed)
-    # set_determinism_the_old_way(conf.train.pl_trainer.deterministic)
-    # conf.train.pl_trainer.deterministic = False
 
-    console.log(f"Starting training for [bold cyan]{conf.train.model_name}[/bold cyan] model")
+    console.log(
+        f"Starting training for [bold cyan]{conf.train.model_name}[/bold cyan] model"
+    )
     if conf.train.pl_trainer.fast_dev_run:
         console.log(
             f"Debug mode {conf.train.pl_trainer.fast_dev_run}. Forcing debugger configuration"
         )
         # Debuggers don't like GPUs nor multiprocessing
-        conf.train.pl_trainer.gpus = 0
+        conf.train.pl_trainer.accelerator = "cpu"
+        conf.train.pl_trainer.devices = 1
+        conf.train.pl_trainer.strategy = None
         conf.train.pl_trainer.precision = 32
-        conf.data.datamodule.num_workers = {k: 0 for k in conf.data.datamodule.num_workers}
+        conf.data.datamodule.num_workers = {
+            k: 0 for k in conf.data.datamodule.num_workers
+        }
         # Switch wandb to offline mode to prevent online logging
         conf.logging.log = None
         # remove model checkpoint callback
         conf.train.model_checkpoint_callback = None
 
-    # table = Table(show_header=True, header_style="bold")
-    # table.add_column("Parameter")
-    # table.add_column("Value")
-    # for param, value in conf.items():
-    #     table.add_row(str(param), str(value))
-    # console.print(table)
-
     # data module declaration
     console.log(f"Instantiating the Data Module")
-    pl_data_module: NERDataModule = hydra.utils.instantiate(conf.data.datamodule, _recursive_=False)
+    pl_data_module: NERDataModule = hydra.utils.instantiate(
+        conf.data.datamodule, _recursive_=False
+    )
     # force setup to get labels initialized for the model
     pl_data_module.prepare_data()
 
@@ -82,9 +81,11 @@ def train(conf: omegaconf.DictConfig) -> None:
         )
         callbacks_store.append(early_stopping_callback)
 
+    model_checkpoint_callback: Optional[ModelCheckpoint] = None
     if conf.train.model_checkpoint_callback is not None:
-        model_checkpoint_callback: ModelCheckpoint = hydra.utils.instantiate(
-            conf.train.model_checkpoint_callback, dirpath=experiment_path / "checkpoints"
+        model_checkpoint_callback = hydra.utils.instantiate(
+            conf.train.model_checkpoint_callback,
+            dirpath=experiment_path / "checkpoints",
         )
         callbacks_store.append(model_checkpoint_callback)
 
@@ -94,6 +95,7 @@ def train(conf: omegaconf.DictConfig) -> None:
         conf.train.pl_trainer, callbacks=callbacks_store, logger=experiment_logger
     )
 
+    model_export: Optional[Path] = None
     if experiment_path:
         # save labels before starting training
         model_export = experiment_path / "model_export"
@@ -115,73 +117,64 @@ def train(conf: omegaconf.DictConfig) -> None:
     # module test
     trainer.test(best_pl_module, datamodule=pl_data_module)
 
-    # if conf.train.export and not conf.train.pl_trainer.fast_dev_run:
-    #     # export model stuff
-    #     best_model = best_pl_module.model
-    #     torch.save(
-    #         best_model.state_dict(),
-    #         model_export / "weights.pt",
-    #     )
-    #     if is_onnx_available():
-    #         from onnxruntime.quantization import quantize_dynamic, QuantType
+    if conf.train.export and not conf.train.pl_trainer.fast_dev_run:
+        # export model stuff
+        best_model = best_pl_module.model
+        torch.save(
+            best_model.state_dict(),
+            model_export / "weights.pt",
+        )
+        if is_onnx_available():
+            from onnxruntime.quantization import quantize_dynamic, QuantType
 
-    #         inputs = next(iter(pl_data_module.train_dataloader()))
-    #         dynamic_axes = {
-    #             "input_ids": {
-    #                 0: "batch_size",
-    #                 1: "batch_length",
-    #             },  # variable length axes
-    #             "attention_mask": {
-    #                 0: "batch_size",
-    #                 1: "batch_length",
-    #             },  # variable length axes
-    #             "offsets": {
-    #                 0: "batch_size",
-    #                 1: "batch_length",
-    #             },  # variable length axes
-    #             "ner_tags": {
-    #                 0: "batch_size",
-    #                 1: "batch_length",
-    #             },  # variable length axes
-    #         }
-    #         # onnx accepts only Tuples
-    #         onnx_inputs = (
-    #             inputs.input_ids,
-    #             inputs.attention_mask,
-    #             inputs.offsets,
-    #         )
-    #         input_names = ["input_ids", "attention_mask", "offsets"]
+            inputs = next(iter(pl_data_module.train_dataloader()))
+            dynamic_axes = {
+                "input_ids": {
+                    0: "batch_size",
+                    1: "batch_length",
+                },  # variable length axes
+                "attention_mask": {
+                    0: "batch_size",
+                    1: "batch_length",
+                },  # variable length axes
+                "offsets": {
+                    0: "batch_size",
+                    1: "batch_length",
+                },  # variable length axes
+                "ner_tags": {
+                    0: "batch_size",
+                    1: "batch_length",
+                },  # variable length axes
+            }
+            # onnx accepts only Tuples
+            onnx_inputs = (
+                inputs.input_ids,
+                inputs.attention_mask,
+                inputs.offsets,
+            )
+            input_names = ["input_ids", "attention_mask", "offsets"]
 
-    #         # export onnx
-    #         torch.onnx.export(
-    #             best_model,
-    #             onnx_inputs,
-    #             model_export / "weights.onnx",
-    #             export_params=True,  # store the trained parameter weights inside the model file
-    #             opset_version=15,  # the ONNX version to export the model to
-    #             do_constant_folding=True,  # whether to execute constant folding for optimization
-    #             input_names=input_names,  # the model's input names
-    #             output_names=["ner_tags"],  # the model's output names
-    #             verbose=False,
-    #             dynamic_axes=dynamic_axes,
-    #         )
-    #         quantize_dynamic(
-    #             model_input=model_export / "weights.onnx",
-    #             model_output=model_export / "weights.quantized.onnx",
-    #             per_channel=True,
-    #             activation_type=QuantType.QUInt8,
-    #             weight_type=QuantType.QUInt8,
-    #             optimize_model=True,
-    #         )
-
-
-def set_determinism_the_old_way(deterministic: bool):
-    # determinism for cudnn
-    torch.backends.cudnn.deterministic = deterministic
-    if deterministic:
-        # fixing non-deterministic part of horovod
-        # https://github.com/PyTorchLightning/pytorch-lightning/pull/1572/files#r420279383
-        os.environ["HOROVOD_FUSION_THRESHOLD"] = str(0)
+            # export onnx
+            torch.onnx.export(
+                best_model,
+                onnx_inputs,
+                model_export / "weights.onnx",
+                export_params=True,  # store the trained parameter weights inside the model file
+                opset_version=15,  # the ONNX version to export the model to
+                do_constant_folding=True,  # whether to execute constant folding for optimization
+                input_names=input_names,  # the model's input names
+                output_names=["ner_tags"],  # the model's output names
+                verbose=False,
+                dynamic_axes=dynamic_axes,
+            )
+            quantize_dynamic(
+                model_input=model_export / "weights.onnx",
+                model_output=model_export / "weights.quantized.onnx",
+                per_channel=True,
+                activation_type=QuantType.QUInt8,
+                weight_type=QuantType.QUInt8,
+                optimize_model=True,
+            )
 
 
 _onnx_available = importlib.util.find_spec("onnx") is not None
@@ -191,7 +184,7 @@ def is_onnx_available():
     return _onnx_available
 
 
-@hydra.main(config_path="../conf")
+@hydra.main(config_path="../conf", config_name="default")
 def main(conf: omegaconf.DictConfig):
     train(conf)
 

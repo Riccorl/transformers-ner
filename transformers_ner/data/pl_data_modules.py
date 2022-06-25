@@ -39,22 +39,18 @@ class NERDataModule(pl.LightningDataModule):
         self.tokenizer = tre.Tokenizer(language_model_name)
 
     def prepare_data(self, *args, **kwargs):
-        # load dataset from HF
-        if isinstance(self.dataset, str):
-            datasets = load_dataset(self.dataset)
-        elif isinstance(self.dataset, DictConfig):
-            # load datasets from file
-            datasets = hydra.utils.instantiate(self.dataset).datasets
-        else:
-            raise ValueError(f"dataset must be `str` or `DictConfig`, got `{type(self.dataset)}`")
+        datasets = load_dataset(self.dataset)
         # build labels
         if not self.labels:
             self.labels = Labels()
             self.labels.add_labels(
-                {n: i for i, n in enumerate(datasets["train"].features["ner_tags"].feature.names)}
+                {
+                    n: i
+                    for i, n in enumerate(
+                        datasets["train"].features["ner_tags"].feature.names
+                    )
+                }
             )
-            # for sample in datasets["train"]:
-            #     self.labels.add_labels(sample["ner_tags"])
         # split data
         self.train_data = datasets["train"]
         self.dev_data = datasets["validation"]
@@ -104,10 +100,6 @@ class NERDataModule(pl.LightningDataModule):
         # if no labels, prediction batch
         if "ner_tags" in batch[0].keys():
             labels = [[0] + b["ner_tags"] + [0] for b in batch]
-            # labels = [
-            #     [self.labels.get_index_from_label(l) for l in b["ner_tags"]]
-            #     for b in batch
-            # ]
             labels = pad_sequence(
                 [torch.as_tensor(sample) for sample in labels],
                 batch_first=True,

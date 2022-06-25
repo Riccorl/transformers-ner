@@ -113,10 +113,10 @@ class TransformersNER(torch.nn.Module):
                 The logits of the model.
             labels (`torch.Tensor`):
                 The labels of the model.
-            inventory (`str`):
-                The inventory of the event.
 
         Returns:
             obj:`torch.Tensor`: The loss of the model.
         """
-        return F.cross_entropy(logits.view(-1, self.labels.get_label_size()), labels.view(-1))
+        return F.cross_entropy(
+            logits.view(-1, self.labels.get_label_size()), labels.view(-1)
+        )

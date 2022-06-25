@@ -1,16 +1,16 @@
 _target_: models.pl_modules.NERModule
 
 model:
-  _target_: models.models.TransformersNER
-  language_model: 'roberta-large'
-  return_words: True
-  layer_pooling_strategy: 'mean'
+  _target_: models.model.TransformersNER
+  language_model: "bert-base-cased"
+  subword_pooling_strategy: "sparse"
+  layer_pooling_strategy: 'scalar_mix'
   fine_tune: True
   dropout: 0.1
   use_viterbi: True
 
 optim_params:
-  optimizer: 'radam'
+  optimizer: "radam"
   lr: 2e-4
   lm_lr: 2e-5
   lm_weight_decay: 0.0
