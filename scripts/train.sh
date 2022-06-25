@@ -129,6 +129,7 @@ if [ "$DEV_RUN" = "True" ]; then
   PRECISION=32
   ACCELERATOR="cpu"
   NODES=1
+  USE_CPU="True"
 fi
 
 # if -s is not specified, STRATEGY is None

@@ -65,9 +65,9 @@ class TransformersNER(torch.nn.Module):
                 The input ids of the sentences.
             attention_mask (`torch.Tensor`):
                 The attention mask of the sentences.
-            token_type_ids (`torch.Tensor`):
+            sparse_offsets (`torch.Tensor`):
                 The token type ids of the sentences.
-            offsets (`torch.Tensor`):
+            scatter_offsets (`torch.Tensor`):
                 The offsets of the sentences.
             labels (`torch.Tensor`):
                 The labels of the sentences.
