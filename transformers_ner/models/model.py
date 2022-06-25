@@ -31,6 +31,8 @@ class TransformersNER(torch.nn.Module):
             subword_pooling_strategy=subword_pooling_strategy,
             layer_pooling_strategy=layer_pooling_strategy,
             fine_tune=fine_tune,
+            *args,
+            **kwargs,
         )
         self.linears = torch.nn.Sequential(
             torch.nn.Dropout(dropout),
