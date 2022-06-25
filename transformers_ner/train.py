@@ -1,6 +1,4 @@
 import importlib.util
-import json
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -17,9 +15,6 @@ from rich.console import Console
 
 from data.pl_data_modules import NERDataModule
 from models.pl_modules import NERModule
-from rich.pretty import pprint
-from rich.console import Console
-from rich.table import Table
 
 
 def train(conf: omegaconf.DictConfig) -> None:
