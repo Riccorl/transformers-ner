@@ -21,8 +21,8 @@ where:
     OVERRIDES     Overrides for the experiment, in the form of key=value.
                   For example, 'model_name=bert-base-uncased'
 Example:
-  ./script/train.sh bert-base-cased
-  ./script/train.sh bert-base-cased -m 10000
+  ./script/train.sh -l bert-base-cased
+  ./script/train.sh -l bert-base-cased -m 10000
 "
 
 # check for named params
@@ -169,17 +169,20 @@ GPU_RAM_MESSAGE=""
 # echo configuration
 
 cat <<EOF
+
 Configuration:
-------------------------------------------------
-Language model name:  $LANG_MODEL_NAME
-Run in debug mode:    $DEV_RUN
-Requested VRAM:       $GPU_MEM MB
-Available VRAM:       $FREE_MEM MB
-Precision:            $PRECISION bit
-Number of GPUs:       $DEVICES
-Number of nodes:      $NODES
-Use CPU:              $USE_CPU
-W&B Mode:             $WANDB
+-------------------------------------------------------------------
+Language model name:              $LANG_MODEL_NAME
+Run in debug mode:                $DEV_RUN
+Requested VRAM:                   $GPU_MEM MB
+Available VRAM:                   $FREE_MEM MB
+Precision:                        $PRECISION bit
+Number of GPUs:                   $DEVICES
+Number of nodes:                  $NODES
+Use CPU:                          $USE_CPU
+W&B Mode:                         $WANDB
+Hydra Configuration Overrides:    $EXTRA_OVERRIDES
+-------------------------------------------------------------------
 
 EOF
 
