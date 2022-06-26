@@ -4,11 +4,11 @@
 # checkmark font for fancy log
 CHECK_MARK="\033[0;32m\xE2\x9C\x94\033[0m"
 # usage text
-USAGE="$(basename "$0") LANG_MODEL_NAME [-h] [-d] [-p PRECISION] [-c] [-g DEVICES] [-n NODES] [-m GPU_MEM] [-s STRATEGY] [-o] OVERRIDES
+USAGE="$(basename "$0") [-h] [-l LANG_MODEL_NAME] [-d] [-p PRECISION] [-c] [-g DEVICES] [-n NODES] [-m GPU_MEM] [-s STRATEGY] [-o] OVERRIDES
 
 where:
-    LANG_MODEL_NAME   Language model name (one of the models from HuggingFace)
     -h            Show this help text
+    -l            Language model name (one of the models from HuggingFace)
     -d            Run in debug mode (no GPU and wandb offline)
     -p            Training precision, default 16.
     -c            Use CPU instead of GPU.
@@ -26,46 +26,53 @@ Example:
 "
 
 # check for named params
-while [ $OPTIND -le "$#" ]; do
-  if getopts ":hdp:cgn:m:s:o" opt; then
-    case $opt in
-    h)
-      printf "%s$USAGE" && exit 0
-      ;;
-    d)
-      DEV_RUN="True"
-      ;;
-    p)
-      PRECISION="$OPTARG"
-      ;;
-    c)
-      USE_CPU="True"
-      ;;
-    g)
-      DEVICES="$OPTARG"
-      ;;
-    n)
-      NODES="$OPTARG"
-      ;;
-    m)
-      GPU_MEM="$OPTARG"
-      ;;
-    s)
-      STRATEGY="$OPTARG"
-      ;;
-    o)
-      WANDB="offline"
-      ;;
-    \?)
-      echo "Invalid option -$OPTARG" >&2 && echo "$USAGE" && exit 0
-      ;;
-    esac
-  shift $((OPTIND-1))
-  else
-    LANG_MODEL_NAME=${*:$OPTIND:1}
-    ((OPTIND++))
-  fi
+#while [ $OPTIND -le "$#" ]; do
+while getopts ":hl:dp:cgn:m:s:o" opt; do
+  case $opt in
+  h)
+    printf "%s$USAGE" && exit 0
+    ;;
+  l)
+    LANG_MODEL_NAME="$OPTARG"
+    ;;
+  d)
+    DEV_RUN="True"
+    ;;
+  p)
+    PRECISION="$OPTARG"
+    ;;
+  c)
+    USE_CPU="True"
+    ;;
+  g)
+    DEVICES="$OPTARG"
+    ;;
+  n)
+    NODES="$OPTARG"
+    ;;
+  m)
+    GPU_MEM="$OPTARG"
+    ;;
+  s)
+    STRATEGY="$OPTARG"
+    ;;
+  o)
+    WANDB="offline"
+    ;;
+  \?)
+    echo "Invalid option -$OPTARG" >&2 && echo "$USAGE" && exit 0
+    ;;
+  esac
 done
+
+# if LANG_MODEL_NAME is not specified, abort
+if [ -z "$LANG_MODEL_NAME" ]; then
+  printf "A language model name must be specified.\n\n"
+  printf "%s$USAGE"
+  exit 0
+fi
+
+shift $((OPTIND-1))
 
 EXTRA_OVERRIDES="$@"
 
@@ -76,12 +83,6 @@ source $CONDA_BASE/bin/activate ner
 # Default device is GPU
 ACCELERATOR="gpu"
 
-## if LANG_MODEL_NAME is not specified, abort
-if [ -z "$LANG_MODEL_NAME" ]; then
-  printf "A configuration name must be specified.\n\n"
-  printf "%s$USAGE"
-  exit 0
-fi
 
 # if -d is not specified, DEV_RUN is False
 if [ -z "$DEV_RUN" ]; then
