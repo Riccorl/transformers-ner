@@ -4,7 +4,6 @@ datamodule:
   language_model_name: ${model.model.language_model}
   dataset:
     _target_: data.datasets.CoNLL2012NERDataset
-    local_files_only: True
 
   batch_sizes:
     train: 32
