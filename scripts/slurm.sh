@@ -12,5 +12,6 @@
 #SBATCH -e job.err          # for stderr redirection
 
 export WANDB_CACHE_DIR=$CINECA_SCRATCH/wandb_cache
+export HF_DATASETS_CACHE=$CINECA_SCRATCH/hf_datasets_cache
 
 srun ./scripts/train.sh "$@" "+model.model.local_files_only=True" "+data.dataset.local_files_only=True"

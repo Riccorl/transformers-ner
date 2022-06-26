@@ -76,10 +76,6 @@ fi
 shift $((OPTIND-1))
 # split overrides into key=value pairs
 OVERRIDES=$(echo "$@" | sed -e 's/ /\n/g')
-#for PARAM in "$@"
-#do
-#    OVERRIDES="${OVERRIDES} ${PARAM}"
-#done
 
 # PRELIMINARIES
 CONDA_BASE=$(conda info --base)
