@@ -65,17 +65,15 @@ class CoNLL2003NERDataset(Dataset):
 
     def collate_fn(self, batch: Dict, tokenizer: tre.Tokenizer) -> ModelInputs:
         batch_out = tokenizer(
-            [b["tokens"] for b in batch],
+            [b["tokens"][:self.max_length] for b in batch],
             return_tensors=True,
             padding=True,
-            truncation=True,
             is_split_into_words=True,
-            max_length=self.max_length,
         )
         # prepare for possible label
         # if no labels, prediction batch
         if "ner_tags" in batch[0].keys():
-            labels = [[0] + b["ner_tags"] + [0] for b in batch]
+            labels = [[0] + b["ner_tags"][:self.max_length] + [0] for b in batch]
             labels = pad_sequence(
                 [torch.as_tensor(sample) for sample in labels],
                 batch_first=True,
@@ -126,17 +124,15 @@ class CoNLL2012NERDataset(Dataset):
 
     def collate_fn(self, batch: Dict, tokenizer: tre.Tokenizer) -> ModelInputs:
         batch_out = tokenizer(
-            [b["words"] for b in batch],
+            [b["words"][:self.max_length] for b in batch],
             return_tensors=True,
             padding=True,
-            truncation=True,
             is_split_into_words=True,
-            max_length=self.max_length,
         )
         # prepare for possible label
         # if no labels, prediction batch
         if "named_entities" in batch[0].keys():
-            labels = [[0] + b["named_entities"] + [0] for b in batch]
+            labels = [[0] + b["named_entities"][:self.max_length] + [0] for b in batch]
             labels = pad_sequence(
                 [torch.as_tensor(sample) for sample in labels],
                 batch_first=True,
