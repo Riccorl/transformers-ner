@@ -75,13 +75,11 @@ fi
 # shift for overrides
 shift $((OPTIND-1))
 # split overrides into key=value pairs
-OVERRIDES=""
-for PARAM in "$@"
-do
-    OVERRIDES="${OVERRIDES} ${PARAM}"
-done
-# remove leading space
-OVERRIDES=${OVERRIDES//[[:blank:]]/}
+OVERRIDES=$(echo "$@" | sed -e 's/ /\n/g')
+#for PARAM in "$@"
+#do
+#    OVERRIDES="${OVERRIDES} ${PARAM}"
+#done
 
 # PRELIMINARIES
 CONDA_BASE=$(conda info --base)
@@ -231,7 +229,7 @@ if [ "$DEV_RUN" = "True" ]; then
     "hydra.output_subdir=null" \
     "hydra/job_logging=disabled" \
     "hydra/hydra_logging=disabled" \
-    "$OVERRIDES"
+    $OVERRIDES
 else
   python transformers_ner/train.py \
     "model.model.language_model=$LANG_MODEL_NAME"  \
@@ -242,5 +240,5 @@ else
     "train.pl_trainer.strategy=$STRATEGY" \
     "train.pl_trainer.precision=$PRECISION" \
     "logging.wandb_arg.mode=$WANDB" \
-    "$OVERRIDES"
+    $OVERRIDES
 fi

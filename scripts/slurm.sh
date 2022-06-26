@@ -13,4 +13,4 @@
 
 export WANDB_CACHE_DIR=$CINECA_SCRATCH/wandb_cache
 
-srun ./scripts/train.sh "$@" "model.model.local_files_only=True" "data.dataset.local_files_only=True"
+srun ./scripts/train.sh "$@" "model.model.local_files_only=True" "+data.dataset.local_files_only=True"
