@@ -72,17 +72,23 @@ if [ -z "$LANG_MODEL_NAME" ]; then
   exit 0
 fi
 
+# shift for overrides
 shift $((OPTIND-1))
-
-EXTRA_OVERRIDES="$@"
+# split overrides into key=value pairs
+OVERRIDES=""
+for PARAM in "$@"
+do
+    OVERRIDES="${OVERRIDES} ${PARAM}"
+done
+# remove leading space
+OVERRIDES=${OVERRIDES//[[:blank:]]/}
 
 # PRELIMINARIES
 CONDA_BASE=$(conda info --base)
-source $CONDA_BASE/bin/activate ner
+source "$CONDA_BASE"/bin/activate ner
 
 # Default device is GPU
 ACCELERATOR="gpu"
-
 
 # if -d is not specified, DEV_RUN is False
 if [ -z "$DEV_RUN" ]; then
@@ -166,8 +172,6 @@ else
 fi
 GPU_RAM_MESSAGE=""
 
-# echo configuration
-
 cat <<EOF
 
 Configuration:
@@ -181,7 +185,7 @@ Number of GPUs:                   $DEVICES
 Number of nodes:                  $NODES
 Use CPU:                          $USE_CPU
 W&B Mode:                         $WANDB
-Hydra Configuration Overrides:    $EXTRA_OVERRIDES
+Hydra Configuration Overrides:    $OVERRIDES
 -------------------------------------------------------------------
 
 EOF
@@ -227,7 +231,7 @@ if [ "$DEV_RUN" = "True" ]; then
     "hydra.output_subdir=null" \
     "hydra/job_logging=disabled" \
     "hydra/hydra_logging=disabled" \
-    "$EXTRA_OVERRIDES"
+    "$OVERRIDES"
 else
   python transformers_ner/train.py \
     "model.model.language_model=$LANG_MODEL_NAME"  \
@@ -238,5 +242,5 @@ else
     "train.pl_trainer.strategy=$STRATEGY" \
     "train.pl_trainer.precision=$PRECISION" \
     "logging.wandb_arg.mode=$WANDB" \
-    "$EXTRA_OVERRIDES"
+    "$OVERRIDES"
 fi
