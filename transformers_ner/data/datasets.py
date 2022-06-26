@@ -29,7 +29,7 @@ class Dataset:
         table.add_row("Train", str(len(self.train_data)))
         table.add_row("Validation", str(len(self.dev_data)))
         table.add_row("Test", str(len(self.test_data)))
-        console.print(f"Dataset name: {self.dataset_name}")
+        console.print(f"Dataset name: [bold magenta]{self.dataset_name}[/bold magenta]")
         console.print(table)
 
 
