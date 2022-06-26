@@ -3,12 +3,12 @@ datamodule:
 
   language_model_name: ${model.model.language_model}
   dataset:
-    _target_: data.datasets.CoNLL2003NERDataset
+    _target_: data.datasets.CoNLL2012NERDataset
 
   batch_sizes:
-    train: 32
-    dev: 32
-    test: 32
+    train: 2
+    dev: 2
+    test: 2
 
   num_workers:
     train: 4

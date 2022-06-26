@@ -11,4 +11,6 @@
 #SBATCH -o job.out          # for stdout redirection
 #SBATCH -e job.err          # for stderr redirection
 
+export WANDB_CACHE_DIR=$CINECA_SCRATCH/wandb_cache
+
 srun ./scripts/train.sh "$@"

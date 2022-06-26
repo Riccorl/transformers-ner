@@ -1,22 +1,20 @@
 from typing import Any, Union, List, Optional
 
+import hydra
 import pytorch_lightning as pl
 import torch
 import transformers_embedder as tre
-from datasets import load_dataset
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
-import hydra
-from torch.nn.utils.rnn import pad_sequence
-from transformers_embedder.tokenizer import ModelInputs
 
+from data.datasets import Dataset
 from data.labels import Labels
 
 
 class NERDataModule(pl.LightningDataModule):
     def __init__(
         self,
-        dataset: Union[str, DictConfig],
+        dataset: Union[DictConfig, Dataset],
         language_model_name: str,
         batch_sizes: DictConfig,
         num_workers: DictConfig,
@@ -26,12 +24,9 @@ class NERDataModule(pl.LightningDataModule):
     ):
         super().__init__()
         # data
-        self.train_data = None
-        self.dev_data = None
-        self.test_data = None
+        self.dataset: Union[DictConfig, Dataset] = dataset
         self.labels = labels
         # params
-        self.dataset = dataset
         self.language_model_name = language_model_name
         self.batch_sizes = batch_sizes
         self.num_workers = num_workers
@@ -39,29 +34,19 @@ class NERDataModule(pl.LightningDataModule):
         self.tokenizer = tre.Tokenizer(language_model_name, *args, **kwargs)
 
     def prepare_data(self, *args, **kwargs):
-        datasets = load_dataset(self.dataset)
-        # build labels
-        if not self.labels:
-            self.labels = Labels()
-            self.labels.add_labels(
-                {
-                    n: i
-                    for i, n in enumerate(
-                        datasets["train"].features["ner_tags"].feature.names
-                    )
-                }
-            )
-        # split data
-        self.train_data = datasets["train"]
-        self.dev_data = datasets["validation"]
-        self.test_data = datasets["test"]
+        if isinstance(self.dataset, DictConfig):
+            self.dataset = hydra.utils.instantiate(self.dataset)
+        if self.labels is None:
+            self.labels = self.dataset.labels
+        # print some stats
+        self.dataset.print_stats()
 
     def setup(self, stage: Optional[str] = None):
         pass
 
     def train_dataloader(self, *args, **kwargs) -> DataLoader:
         return DataLoader(
-            self.train_data,
+            self.dataset.train_data,
             batch_size=self.batch_sizes.train,
             collate_fn=self.collate_fn,
             num_workers=self.num_workers.train,
@@ -70,7 +55,7 @@ class NERDataModule(pl.LightningDataModule):
 
     def val_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         return DataLoader(
-            self.dev_data,
+            self.dataset.dev_data,
             batch_size=self.batch_sizes.dev,
             collate_fn=self.collate_fn,
             num_workers=self.num_workers.dev,
@@ -78,7 +63,7 @@ class NERDataModule(pl.LightningDataModule):
 
     def test_dataloader(self, *args, **kwargs) -> Union[DataLoader, List[DataLoader]]:
         return DataLoader(
-            self.test_data,
+            self.dataset.test_data,
             batch_size=self.batch_sizes.test,
             collate_fn=self.collate_fn,
             num_workers=self.num_workers.test,
@@ -89,21 +74,5 @@ class NERDataModule(pl.LightningDataModule):
     ) -> Any:
         return batch.to(device)
 
-    def collate_fn(self, batch):
-        batch_out = self.tokenizer(
-            [b["tokens"] for b in batch],
-            return_tensors=True,
-            padding=True,
-            is_split_into_words=True,
-        )
-        # prepare for possible label
-        # if no labels, prediction batch
-        if "ner_tags" in batch[0].keys():
-            labels = [[0] + b["ner_tags"] + [0] for b in batch]
-            labels = pad_sequence(
-                [torch.as_tensor(sample) for sample in labels],
-                batch_first=True,
-                padding_value=-100,
-            )
-            batch_out.update({"labels": torch.as_tensor(labels)})
-        return batch_out
+    def collate_fn(self, batch: Any) -> Any:
+        return self.dataset.collate_fn(batch, self.tokenizer)

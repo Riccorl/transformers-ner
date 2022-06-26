@@ -4,7 +4,7 @@
 # checkmark font for fancy log
 CHECK_MARK="\033[0;32m\xE2\x9C\x94\033[0m"
 # usage text
-USAGE="$(basename "$0") LANG_MODEL_NAME [-h] [-d] [-p PRECISION] [-c] [-m GPU_MEM] [-o]
+USAGE="$(basename "$0") LANG_MODEL_NAME [-h] [-d] [-p PRECISION] [-c] [-g DEVICES] [-n NODES] [-m GPU_MEM] [-s STRATEGY] [-o] OVERRIDES
 
 where:
     LANG_MODEL_NAME   Language model name (one of the models from HuggingFace)
@@ -18,7 +18,8 @@ where:
                   training will wait until there is enough space.
     -s            Strategy to use for distributed training, default NULL.
     -o            Run the experiment offline
-
+    OVERRIDES     Overrides for the experiment, in the form of key=value.
+                  For example, 'model_name=bert-base-uncased'
 Example:
   ./script/train.sh bert-base-cased
   ./script/train.sh bert-base-cased -m 10000
@@ -26,7 +27,7 @@ Example:
 
 # check for named params
 while [ $OPTIND -le "$#" ]; do
-  if getopts ":hdp:cgm:o" opt; then
+  if getopts ":hdp:cgn:m:s:o" opt; then
     case $opt in
     h)
       printf "%s$USAGE" && exit 0
@@ -59,11 +60,14 @@ while [ $OPTIND -le "$#" ]; do
       echo "Invalid option -$OPTARG" >&2 && echo "$USAGE" && exit 0
       ;;
     esac
+  shift $((OPTIND-1))
   else
     LANG_MODEL_NAME=${*:$OPTIND:1}
     ((OPTIND++))
   fi
 done
+
+EXTRA_OVERRIDES="$@"
 
 # PRELIMINARIES
 CONDA_BASE=$(conda info --base)
@@ -218,7 +222,8 @@ if [ "$DEV_RUN" = "True" ]; then
     "hydra.run.dir=." \
     "hydra.output_subdir=null" \
     "hydra/job_logging=disabled" \
-    "hydra/hydra_logging=disabled"
+    "hydra/hydra_logging=disabled" \
+    "$EXTRA_OVERRIDES"
 else
   python transformers_ner/train.py \
     "model.model.language_model=$LANG_MODEL_NAME"  \
@@ -228,5 +233,6 @@ else
     "train.pl_trainer.num_nodes=$NODES" \
     "train.pl_trainer.strategy=$STRATEGY" \
     "train.pl_trainer.precision=$PRECISION" \
-    "logging.wandb_arg.mode=$WANDB"
+    "logging.wandb_arg.mode=$WANDB" \
+    "$EXTRA_OVERRIDES"
 fi

@@ -9,7 +9,7 @@ defaults:
   - _self_
   - train: default
   - model: default
-  - data: conll2003_ner
+  - data: conll2012_ner
   - evaluate: default
   - logging: wandb_logging
   - override hydra/job_logging: colorlog
