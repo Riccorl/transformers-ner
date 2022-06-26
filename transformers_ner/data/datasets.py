@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import torch
 import transformers_embedder as tre
@@ -15,8 +15,14 @@ console = Console()
 
 
 class Dataset:
-    def __init__(self):
-        self.dataset_name = "dataset"
+    def __init__(
+        self,
+        dataset_name: Optional[str] = None,
+        max_length: int = 128,
+        **kwargs,
+    ):
+        self.dataset_name = dataset_name
+        self.max_length = max_length
         self.train_data = None
         self.dev_data = None
         self.test_data = None
@@ -32,11 +38,15 @@ class Dataset:
         console.print(f"Dataset name: [bold magenta]{self.dataset_name}[/bold magenta]")
         console.print(table)
 
+    def collate_fn(self, batch: Dict, tokenizer: tre.Tokenizer) -> ModelInputs:
+        raise NotImplementedError
+
 
 class CoNLL2003NERDataset(Dataset):
-    def __init__(self):
-        super().__init__()
-        self.dataset_name = "conll2003"
+    def __init__(
+        self, dataset_name: str = "conll2003", max_length: int = 128, **kwargs
+    ):
+        super().__init__(dataset_name, max_length)
         dataset = load_dataset(self.dataset_name)
         # build labels
         self.labels = Labels()
@@ -53,13 +63,13 @@ class CoNLL2003NERDataset(Dataset):
         self.dev_data = dataset["validation"]
         self.test_data = dataset["test"]
 
-    @staticmethod
-    def collate_fn(batch: Dict, tokenizer: tre.Tokenizer) -> ModelInputs:
+    def collate_fn(self, batch: Dict, tokenizer: tre.Tokenizer) -> ModelInputs:
         batch_out = tokenizer(
             [b["tokens"] for b in batch],
             return_tensors=True,
             padding=True,
             is_split_into_words=True,
+            max_length=self.max_length,
         )
         # prepare for possible label
         # if no labels, prediction batch
@@ -75,10 +85,15 @@ class CoNLL2003NERDataset(Dataset):
 
 
 class CoNLL2012NERDataset(Dataset):
-    def __init__(self):
-        super().__init__()
-        self.dataset_name = "conll2012_ontonotesv5"
-        dataset = load_dataset(self.dataset_name, "english_v12")
+    def __init__(
+        self,
+        dataset_name: str = "conll2012_ontonotesv5",
+        max_length: int = 128,
+        version: str = "english_v12",
+        **kwargs,
+    ):
+        super().__init__(dataset_name, max_length)
+        dataset = load_dataset(self.dataset_name, version)
         # build labels
         self.labels = Labels()
         self.labels.add_labels(
@@ -108,13 +123,13 @@ class CoNLL2012NERDataset(Dataset):
             for sentence in sentences
         ]
 
-    @staticmethod
-    def collate_fn(batch: Dict, tokenizer: tre.Tokenizer) -> ModelInputs:
+    def collate_fn(self, batch: Dict, tokenizer: tre.Tokenizer) -> ModelInputs:
         batch_out = tokenizer(
             [b["words"] for b in batch],
             return_tensors=True,
             padding=True,
             is_split_into_words=True,
+            max_length=self.max_length,
         )
         # prepare for possible label
         # if no labels, prediction batch

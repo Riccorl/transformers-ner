@@ -4,6 +4,7 @@ datamodule:
   language_model_name: ${model.model.language_model}
   dataset:
     _target_: data.datasets.CoNLL2003NERDataset
+    max_length: 256
 
   batch_sizes:
     train: 32
