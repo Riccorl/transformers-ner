@@ -68,6 +68,7 @@ class CoNLL2003NERDataset(Dataset):
             [b["tokens"] for b in batch],
             return_tensors=True,
             padding=True,
+            truncation=True,
             is_split_into_words=True,
             max_length=self.max_length,
         )
@@ -128,6 +129,7 @@ class CoNLL2012NERDataset(Dataset):
             [b["words"] for b in batch],
             return_tensors=True,
             padding=True,
+            truncation=True,
             is_split_into_words=True,
             max_length=self.max_length,
         )
