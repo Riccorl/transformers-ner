@@ -39,6 +39,15 @@ def preliminaries(conf: omegaconf.DictConfig, console):
         console.log(f"Instantiating Wandb Logger")
         experiment_logger = hydra.utils.instantiate(conf.logging.wandb_arg)
         experiment_logger.watch(pl_module, **conf.logging.watch)
+        experiment_path = Path(experiment_logger.experiment.dir)
+        # Store the YaML config separately into the wandb dir
+        yaml_conf: str = OmegaConf.to_yaml(cfg=conf)
+        (experiment_path / "hparams.yaml").write_text(yaml_conf)
+        # save labels before starting training
+        model_export = experiment_path / "model_export"
+        model_export.mkdir(exist_ok=True, parents=True)
+        # save labels
+        pl_data_module.labels.to_file(model_export / "labels.json")
 
     # callbacks declaration
     callbacks_store = [RichProgressBar()]
@@ -53,7 +62,9 @@ def preliminaries(conf: omegaconf.DictConfig, console):
     if conf.train.model_checkpoint_callback is not None:
         model_checkpoint_callback = hydra.utils.instantiate(
             conf.train.model_checkpoint_callback,
-            dirpath=experiment_path / "checkpoints",
+            dirpath=experiment_path / "checkpoints"
+            if experiment_path is not None
+            else None,
         )
         callbacks_store.append(model_checkpoint_callback)
     return pl_data_module, pl_module, callbacks_store, experiment_logger
@@ -86,7 +97,9 @@ def train(conf: omegaconf.DictConfig) -> None:
         conf.train.model_checkpoint_callback = None
 
     # preliminaries
-    pl_data_module, pl_module, callbacks_store, experiment_logger = preliminaries(conf, console)
+    pl_data_module, pl_module, callbacks_store, experiment_logger = preliminaries(
+        conf, console
+    )
 
     # trainer
     console.log(f"Instantiating the Trainer")
@@ -94,18 +107,9 @@ def train(conf: omegaconf.DictConfig) -> None:
         conf.train.pl_trainer, callbacks=callbacks_store, logger=experiment_logger
     )
 
-    model_export: Optional[Path] = None
-    if trainer.global_rank == 0:
-        if conf.logging.log:
-            experiment_path = Path(experiment_logger.experiment.dir)
-            # Store the YaML config separately into the wandb dir
-            yaml_conf: str = OmegaConf.to_yaml(cfg=conf)
-            (experiment_path / "hparams.yaml").write_text(yaml_conf)
-            # save labels before starting training
-            model_export = experiment_path / "model_export"
-            model_export.mkdir(exist_ok=True, parents=True)
-            # save labels
-            pl_data_module.labels.to_file(model_export / "labels.json")
+    # model_export: Optional[Path] = None
+    # if trainer.global_rank == 0:
+    #     if conf.logging.log:
 
     # module fit
     trainer.fit(pl_module, datamodule=pl_data_module)
