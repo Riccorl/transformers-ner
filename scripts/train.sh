@@ -27,7 +27,7 @@ Example:
 
 # check for named params
 #while [ $OPTIND -le "$#" ]; do
-while getopts ":hl:dp:cgn:m:s:o" opt; do
+while getopts ":hl:dp:cg:n:m:s:o" opt; do
   case $opt in
   h)
     printf "%s$USAGE" && exit 0
