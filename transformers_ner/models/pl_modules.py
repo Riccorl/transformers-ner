@@ -48,25 +48,19 @@ class NERModule(pl.LightningModule):
         outputs = self.forward(**val_kwargs)
         self.log("val_loss", outputs["loss"], batch_size=batch_size, sync_dist=True)
 
-        gathered_outputs = self.all_gather(outputs)
-        print("OUTPUTS")
-        print(outputs)
-        print("GATHERED OUTPUTS")
-        print(gathered_outputs)
         # compute f1 score
         metrics = self.compute_f1_score(
             outputs["predictions"], batch["labels"], batch["sentence_lengths"]
         )
-        if self.trainer.is_global_zero:
-            for metric_name, metric_value in metrics.items():
-                if "overall_" in metric_name:
-                    self.log(
-                        f"val_{metric_name}",
-                        metric_value,
-                        prog_bar=True,
-                        batch_size=batch_size,
-                        rank_zero_only=True
-                    )
+        for metric_name, metric_value in metrics.items():
+            if "overall_" in metric_name:
+                self.log(
+                    f"val_{metric_name}",
+                    metric_value,
+                    prog_bar=True,
+                    batch_size=batch_size,
+                    sync_dist=True
+                )
 
     def test_step(self, batch: dict, batch_idx: int) -> None:
         # test kwargs
