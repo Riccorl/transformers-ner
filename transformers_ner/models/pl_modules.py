@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 import torch
 from torch.optim import RAdam
 from transformers_embedder.tokenizer import ModelInputs
+from transformers import Adafactor
 
 from data.labels import Labels
 from utils.scorer import SeqevalScorer
@@ -59,7 +60,7 @@ class NERModule(pl.LightningModule):
                     metric_value,
                     prog_bar=True,
                     batch_size=batch_size,
-                    sync_dist=True
+                    sync_dist=True,
                 )
 
     def test_step(self, batch: dict, batch_idx: int) -> None:
@@ -84,7 +85,7 @@ class NERModule(pl.LightningModule):
                     metric_value,
                     prog_bar=True,
                     batch_size=batch_size,
-                    sync_dist=True
+                    sync_dist=True,
                 )
 
     def compute_f1_score(
@@ -119,30 +120,41 @@ class NERModule(pl.LightningModule):
         lm_decay_parameters = []
         lm_no_decay_parameters = []
 
-        for parameter_name, parameter in self.named_parameters():
-            if "transformer" not in parameter_name:
-                base_parameters.append(parameter)
-            elif not any(v in parameter_name for v in ["bias", "LayerNorm.weight"]):
-                lm_decay_parameters.append(parameter)
-            else:
-                lm_no_decay_parameters.append(parameter)
+        if self.hparams.optim_params.optimizer == "radam":
+            for parameter_name, parameter in self.named_parameters():
+                if "transformer" not in parameter_name:
+                    base_parameters.append(parameter)
+                elif not any(v in parameter_name for v in ["bias", "LayerNorm.weight"]):
+                    lm_decay_parameters.append(parameter)
+                else:
+                    lm_no_decay_parameters.append(parameter)
 
-        optimizer_params = [
-            {
-                "params": base_parameters,
-                "weight_decay": self.hparams.optim_params.weight_decay,
-            },
-            {
-                "params": lm_decay_parameters,
-                "lr": self.hparams.optim_params.lm_lr,
-                "weight_decay": self.hparams.optim_params.lm_weight_decay,
-            },
-            {
-                "params": lm_no_decay_parameters,
-                "lr": self.hparams.optim_params.lm_lr,
-                "weight_decay": 0.0,
-            },
-        ]
+            optimizer_params = [
+                {
+                    "params": base_parameters,
+                    "weight_decay": self.hparams.optim_params.weight_decay,
+                },
+                {
+                    "params": lm_decay_parameters,
+                    "lr": self.hparams.optim_params.lm_lr,
+                    "weight_decay": self.hparams.optim_params.lm_weight_decay,
+                },
+                {
+                    "params": lm_no_decay_parameters,
+                    "lr": self.hparams.optim_params.lm_lr,
+                    "weight_decay": 0.0,
+                },
+            ]
 
-        optimizer = RAdam(optimizer_params, lr=self.hparams.optim_params.lr)
+            optimizer = RAdam(optimizer_params, lr=self.hparams.optim_params.lr)
+        elif self.hparams.optim_params.optimizer == "adafactor":
+            optimizer = Adafactor(
+                self.parameters(),
+                scale_parameter=False,
+                relative_step=False,
+                warmup_init=False,
+                lr=self.hparams.optim_params.lm_lr,
+            )
+        else:
+            raise ValueError(f"Unknown optimizer {self.hparams.optim_params.optimizer}")
         return optimizer
