@@ -19,55 +19,19 @@ from models.pl_modules import NERModule
 
 
 @rank_zero_only
-def preliminaries(conf: omegaconf.DictConfig, console):
-    # data module declaration
-    console.log(f"Instantiating the Data Module")
-    pl_data_module: NERDataModule = hydra.utils.instantiate(
-        conf.data.datamodule, _recursive_=False
-    )
+def preliminaries(conf, pl_data_module, experiment_logger):
     # force setup to get labels initialized for the model
     pl_data_module.prepare_data()
-
-    # main module declaration
-    model_kwargs = {"_recursive_": False, "labels": pl_data_module.labels}
-    console.log(f"Instantiating the Model")
-    pl_module: NERModule = hydra.utils.instantiate(conf.model, **model_kwargs)
-
-    experiment_logger: Optional[WandbLogger] = None
-    experiment_path: Optional[Path] = None
-    if conf.logging.log:
-        console.log(f"Instantiating Wandb Logger")
-        experiment_logger = hydra.utils.instantiate(conf.logging.wandb_arg)
-        experiment_logger.watch(pl_module, **conf.logging.watch)
-        experiment_path = Path(experiment_logger.experiment.dir)
-        # Store the YaML config separately into the wandb dir
-        yaml_conf: str = OmegaConf.to_yaml(cfg=conf)
-        (experiment_path / "hparams.yaml").write_text(yaml_conf)
-        # save labels before starting training
-        model_export = experiment_path / "model_export"
-        model_export.mkdir(exist_ok=True, parents=True)
-        # save labels
-        pl_data_module.labels.to_file(model_export / "labels.json")
-
-    # callbacks declaration
-    callbacks_store = [RichProgressBar()]
-
-    if conf.train.early_stopping_callback is not None:
-        early_stopping_callback: EarlyStopping = hydra.utils.instantiate(
-            conf.train.early_stopping_callback
-        )
-        callbacks_store.append(early_stopping_callback)
-
-    model_checkpoint_callback: Optional[ModelCheckpoint] = None
-    if conf.train.model_checkpoint_callback is not None:
-        model_checkpoint_callback = hydra.utils.instantiate(
-            conf.train.model_checkpoint_callback,
-            dirpath=experiment_path / "checkpoints"
-            if experiment_path is not None
-            else None,
-        )
-        callbacks_store.append(model_checkpoint_callback)
-    return pl_data_module, pl_module, callbacks_store, experiment_logger
+    experiment_path = Path(experiment_logger.experiment.dir)
+    # Store the YaML config separately into the wandb dir
+    yaml_conf: str = OmegaConf.to_yaml(cfg=conf)
+    (experiment_path / "hparams.yaml").write_text(yaml_conf)
+    # save labels before starting training
+    model_export = experiment_path / "model_export"
+    model_export.mkdir(exist_ok=True, parents=True)
+    # save labels
+    pl_data_module.labels.to_file(model_export / "labels.json")
+    return experiment_path
 
 
 def train(conf: omegaconf.DictConfig) -> None:
@@ -96,20 +60,48 @@ def train(conf: omegaconf.DictConfig) -> None:
         # remove model checkpoint callback
         conf.train.model_checkpoint_callback = None
 
-    # preliminaries
-    pl_data_module, pl_module, callbacks_store, experiment_logger = preliminaries(
-        conf, console
+    # data module declaration
+    console.log(f"Instantiating the Data Module")
+    pl_data_module: NERDataModule = hydra.utils.instantiate(
+        conf.data.datamodule, _recursive_=False
     )
+
+    # main module declaration
+    model_kwargs = {"_recursive_": False, "labels": pl_data_module.labels}
+    console.log(f"Instantiating the Model")
+    pl_module: NERModule = hydra.utils.instantiate(conf.model, **model_kwargs)
+
+    experiment_logger: Optional[WandbLogger] = None
+    experiment_path: Optional[Path] = None
+    if conf.logging.log:
+        console.log(f"Instantiating Wandb Logger")
+        experiment_logger = hydra.utils.instantiate(conf.logging.wandb_arg)
+        experiment_logger.watch(pl_module, **conf.logging.watch)
+
+    # callbacks declaration
+    callbacks_store = [RichProgressBar()]
+
+    if conf.train.early_stopping_callback is not None:
+        early_stopping_callback: EarlyStopping = hydra.utils.instantiate(
+            conf.train.early_stopping_callback
+        )
+        callbacks_store.append(early_stopping_callback)
+
+    experiment_path = preliminaries(conf, pl_data_module, experiment_logger)
+
+    model_checkpoint_callback: Optional[ModelCheckpoint] = None
+    if conf.train.model_checkpoint_callback is not None:
+        model_checkpoint_callback = hydra.utils.instantiate(
+            conf.train.model_checkpoint_callback,
+            dirpath=experiment_path / "checkpoints",
+        )
+        callbacks_store.append(model_checkpoint_callback)
 
     # trainer
     console.log(f"Instantiating the Trainer")
     trainer: Trainer = hydra.utils.instantiate(
         conf.train.pl_trainer, callbacks=callbacks_store, logger=experiment_logger
     )
-
-    # model_export: Optional[Path] = None
-    # if trainer.global_rank == 0:
-    #     if conf.logging.log:
 
     # module fit
     trainer.fit(pl_module, datamodule=pl_data_module)
