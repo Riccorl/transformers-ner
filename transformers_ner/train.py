@@ -59,7 +59,7 @@ def preliminaries(conf: omegaconf.DictConfig, console):
         callbacks_store.append(early_stopping_callback)
 
     # model_checkpoint_callback: Optional[ModelCheckpoint] = None
-    # if conf.train.model_checkpoint_callback is not None:
+    if conf.train.model_checkpoint_callback is not None:
         model_checkpoint_callback = hydra.utils.instantiate(
             conf.train.model_checkpoint_callback,
             dirpath=experiment_path / "checkpoints"
