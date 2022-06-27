@@ -2,7 +2,7 @@
 #SBATCH -A tra22_Nvaitc
 #SBATCH -p m100_sys_test
 #SBATCH -q qos_test
-#SBATCH --time 00:20:00     # format: HH:MM:SS
+#SBATCH --time 02:20:00     # format: HH:MM:SS
 #SBATCH -N 1                # 1 node
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=10
