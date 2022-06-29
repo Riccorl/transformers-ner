@@ -59,13 +59,14 @@ class CoNLL2003NERDataset(Dataset):
             }
         )
         # split data
-        self.train_data = dataset["train"]
-        self.dev_data = dataset["validation"]
-        self.test_data = dataset["test"]
+        self.train_data = [sample for sample in dataset["train"] if sample["tokens"]]
+        self.dev_data = [sample for sample in dataset["validation"] if sample["tokens"]]
+        self.test_data = [sample for sample in dataset["test"] if sample["tokens"]]
 
     def collate_fn(self, batch: Dict, tokenizer: tre.Tokenizer) -> ModelInputs:
+        tokens = [b["tokens"][:self.max_length] for b in batch]
         batch_out = tokenizer(
-            [b["tokens"][:self.max_length] for b in batch],
+            tokens,
             return_tensors=True,
             padding=True,
             is_split_into_words=True,
@@ -73,7 +74,10 @@ class CoNLL2003NERDataset(Dataset):
         # prepare for possible label
         # if no labels, prediction batch
         if "ner_tags" in batch[0].keys():
-            labels = [[0] + b["ner_tags"][:self.max_length] + [0] for b in batch]
+            if tokenizer.has_starting_token:
+                labels = [[0] + b["ner_tags"][:self.max_length] + [0] for b in batch]
+            else:
+                labels = [b["ner_tags"][:self.max_length] + [0] for b in batch]
             labels = pad_sequence(
                 [torch.as_tensor(sample) for sample in labels],
                 batch_first=True,
@@ -132,7 +136,10 @@ class CoNLL2012NERDataset(Dataset):
         # prepare for possible label
         # if no labels, prediction batch
         if "named_entities" in batch[0].keys():
-            labels = [[0] + b["named_entities"][:self.max_length] + [0] for b in batch]
+            if tokenizer.has_starting_token:
+                labels = [[0] + b["ner_tags"][:self.max_length] + [0] for b in batch]
+            else:
+                labels = [b["ner_tags"][:self.max_length] + [0] for b in batch]
             labels = pad_sequence(
                 [torch.as_tensor(sample) for sample in labels],
                 batch_first=True,
