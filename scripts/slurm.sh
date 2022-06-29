@@ -5,7 +5,8 @@
 #SBATCH --time 01:30:00     # format: HH:MM:SS
 #SBATCH -N 1                # 1 node
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=128GB
 #SBATCH --gres=gpu:2        # n gpus per node out of 4
 #SBATCH --job-name=ner
 #SBATCH -o job.out          # for stdout redirection

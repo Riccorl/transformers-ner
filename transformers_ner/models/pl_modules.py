@@ -147,6 +147,15 @@ class NERModule(pl.LightningModule):
             ]
 
             optimizer = RAdam(optimizer_params, lr=self.hparams.optim_params.lr)
+        elif self.hparams.optim_params.optimizer == "fuseadam":
+            try:
+                from deepspeed.ops.adam import FusedAdam
+            except ImportError:
+                raise ImportError(
+                    "Please install DeepSpeed (`pip install deepspeed`) to use FuseAdam optimizer."
+                )
+
+            optimizer = FusedAdam(self.parameters())
         elif self.hparams.optim_params.optimizer == "adafactor":
             optimizer = Adafactor(
                 self.parameters(),
